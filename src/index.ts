@@ -1,0 +1,493 @@
+/**
+ * @saluhold/identity-client
+ *
+ * Cliente JS para el Local Server SaluHold (proceso que despliega SaluFile
+ * en el PC de cada clínica y que cachea pacientes/empresas/profesionales de
+ * Identity para acelerar lecturas y permitir trabajo offline).
+ *
+ * Uso típico desde una app frontend:
+ *
+ *   import { localBuscarClientes, setLocalServerHost } from '@saluhold/identity-client';
+ *
+ *   setLocalServerHost(clinicConfig.localServerHost);
+ *   const clientes = await localBuscarClientes('garcia');
+ *   if (clientes === null) {
+ *     // Caer a Cloud Functions
+ *   }
+ *
+ * Cualquier función `local*` devuelve `null` (o `undefined` para los obtener
+ * por id) cuando el servidor local no responde — el caller decide si caer
+ * a Cloud Functions o mostrar un error.
+ */
+
+// ═══════════════════════════════════════════════════════════════════════════
+// TIPOS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export interface ClienteDireccion {
+  calle: string;
+  codigoPostal: string;
+  poblacion: string;
+  provincia: string;
+  pais: string;
+}
+
+/**
+ * Cliente "estándar SaluHold": shape que usan los frontends para mostrar y
+ * editar pacientes y empresas de Identity. Pensado como mínimo común
+ * denominador entre SaluFile, SaluFact y SaluFirst.
+ */
+export interface Cliente {
+  id: string;
+  tipo: 'PACIENTE' | 'EMPRESA';
+  nif: string;
+  nombreRazon: string;
+  tipoIdentificador?: 'DNI' | 'NIE' | 'PASAPORTE' | 'OTRO';
+  email?: string;
+  telefono?: string;
+  direccion: ClienteDireccion;
+  esExterno: boolean;
+  tieneEmail?: boolean;
+  idLocal?: string;
+}
+
+/** Documento crudo de Identity.pacientes que devuelve el local server. */
+export interface RawPaciente {
+  id: string;
+  nombre?: string;
+  apellidos?: string;
+  nif?: string;
+  tipoIdentificador?: 'DNI' | 'NIE' | 'PASAPORTE' | 'OTRO';
+  email?: string;
+  telefono?: string;
+  fechaNacimiento?: string;
+  sexo?: string;
+  direccion?: { calle?: string; codigoPostal?: string; poblacion?: string; provincia?: string; pais?: string };
+  clinicaIds?: string[];
+  idsLocales?: Record<string, string>;
+  idLocal?: string | null;
+}
+
+/** Documento crudo de Identity.empresas que devuelve el local server. */
+export interface RawEmpresa {
+  id: string;
+  nombre?: string;
+  cif?: string;
+  contactos?: Array<{ nombre?: string; departamento?: string; email?: string; telefono?: string; principal?: boolean }>;
+  direccion?: { calle?: string; codigoPostal?: string; poblacion?: string; provincia?: string; pais?: string };
+  clinicaIds?: string[];
+  activo?: boolean;
+}
+
+/** Alias semántico usado por SaluFile (vista interna de paciente). */
+export type IdentityPaciente = RawPaciente;
+
+/** Documento crudo de Identity.profesionales. */
+export interface IdentityProfesional {
+  id: string;
+  uid?: string;
+  nombre?: string;
+  apellidos?: string;
+  email?: string;
+  tratamiento?: string;
+  especialidad?: string;
+  telefono?: string;
+  clinicaIds?: string[];
+  activo?: boolean;
+  [key: string]: unknown;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ESTADO Y CONFIGURACIÓN DE CONEXIÓN
+// ═══════════════════════════════════════════════════════════════════════════
+
+const LOCAL_HTTP_PORT = 3500;        // localhost-only HTTP
+const LOCAL_HTTPS_PORT = 3501;       // LAN HTTPS (requerido por Mixed Content)
+const HEALTH_CHECK_INTERVAL = 30_000;
+const REQUEST_TIMEOUT = 3_000;
+
+let _configuredHost: string | null = null;
+let _localServerUrl = `http://localhost:${LOCAL_HTTP_PORT}`;
+let _isAvailable: boolean | null = null;
+let _lastCheck = 0;
+
+const _stats = { localHits: 0, cloudFallbacks: 0 };
+
+/**
+ * Configura el host LAN del servidor local (e.g. "192.168.1.42"). Se llama
+ * típicamente desde el `useAuth` de cada app cuando carga la config de
+ * clínica desde `tenants/{clinicaId}/config/fiscal.localServerHost`.
+ */
+export function setLocalServerHost(host: string | null | undefined): void {
+  const normalised = (host || '').trim() || null;
+  if (normalised === _configuredHost) return;
+  _configuredHost = normalised;
+  _isAvailable = null;
+  _lastCheck = 0;
+}
+
+export function getLocalServerUrl(): string { return _localServerUrl; }
+export function isLocalServerAvailable(): boolean | null { return _isAvailable; }
+export function getLocalServerStats() { return { ..._stats, isAvailable: _isAvailable }; }
+
+/** Fuerza un re-check al siguiente intento (e.g. tras reiniciar el servidor). */
+export function resetLocalServerCheck(): void {
+  _isAvailable = null;
+  _lastCheck = 0;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LOGGING
+// ═══════════════════════════════════════════════════════════════════════════
+
+function logLocal(fn: string, ms: number, count?: number) {
+  _stats.localHits++;
+  // eslint-disable-next-line no-console
+  console.log(
+    `%c[LOCAL] %c${fn}%c ${ms}ms${count !== undefined ? ` (${count} results)` : ''}`,
+    'color:#10b981;font-weight:bold', 'color:#6366f1', 'color:#9ca3af'
+  );
+}
+
+function logCloud(fn: string) {
+  _stats.cloudFallbacks++;
+  if (_stats.localHits > 0) {
+    // eslint-disable-next-line no-console
+    console.log(
+      `%c[CLOUD] %c${fn}%c → servidor local no disponible`,
+      'color:#f59e0b;font-weight:bold', 'color:#6366f1', 'color:#9ca3af'
+    );
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AVAILABILITY CHECK
+// ═══════════════════════════════════════════════════════════════════════════
+
+async function tryUrl(url: string): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2000);
+    const resp = await fetch(`${url}/health`, { signal: controller.signal });
+    clearTimeout(timeout);
+    return resp.ok;
+  } catch {
+    return false;
+  }
+}
+
+async function checkAvailability(): Promise<boolean> {
+  const now = Date.now();
+  if (_isAvailable !== null && now - _lastCheck < HEALTH_CHECK_INTERVAL) {
+    return _isAvailable;
+  }
+  // localhost HTTP primero (los browsers permiten HTTP→localhost desde HTTPS)
+  const localhostUrl = `http://localhost:${LOCAL_HTTP_PORT}`;
+  if (await tryUrl(localhostUrl)) {
+    _localServerUrl = localhostUrl;
+    _isAvailable = true; _lastCheck = now; return true;
+  }
+  // LAN HTTPS si hay host configurado
+  if (_configuredHost) {
+    const networkUrl = `https://${_configuredHost}:${LOCAL_HTTPS_PORT}`;
+    if (await tryUrl(networkUrl)) {
+      _localServerUrl = networkUrl;
+      _isAvailable = true; _lastCheck = now; return true;
+    }
+  }
+  _isAvailable = false; _lastCheck = now; return false;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// LOW-LEVEL HTTP HELPERS
+// ═══════════════════════════════════════════════════════════════════════════
+
+export async function localPost<T>(path: string, body: Record<string, unknown>): Promise<T | null> {
+  const available = await checkAvailability();
+  if (!available) return null;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+    const resp = await fetch(`${_localServerUrl}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+    clearTimeout(timeout);
+    if (!resp.ok) return null;
+    return await resp.json() as T;
+  } catch {
+    _isAvailable = false;
+    return null;
+  }
+}
+
+export async function localGet<T>(path: string): Promise<T | null> {
+  const available = await checkAvailability();
+  if (!available) return null;
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+    const resp = await fetch(`${_localServerUrl}${path}`, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (!resp.ok) return null;
+    return await resp.json() as T;
+  } catch {
+    _isAvailable = false;
+    return null;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// MAPPERS RAW → CLIENTE
+// ═══════════════════════════════════════════════════════════════════════════
+
+export function mapPacienteToCliente(p: RawPaciente, clinicaId?: string): Cliente {
+  return {
+    id: p.id,
+    tipo: 'PACIENTE',
+    nif: p.nif || '',
+    tipoIdentificador: p.tipoIdentificador,
+    nombreRazon: `${p.apellidos || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, ''),
+    email: p.email || undefined,
+    telefono: p.telefono || undefined,
+    direccion: {
+      calle: p.direccion?.calle || '',
+      codigoPostal: p.direccion?.codigoPostal || '',
+      poblacion: p.direccion?.poblacion || '',
+      provincia: p.direccion?.provincia || '',
+      pais: p.direccion?.pais || 'España',
+    },
+    esExterno: false,
+    idLocal: p.idLocal || (clinicaId ? p.idsLocales?.[clinicaId] : undefined) || undefined,
+  };
+}
+
+export function mapEmpresaToCliente(e: RawEmpresa): Cliente {
+  const contacto = e.contactos?.find(c => c.principal) || e.contactos?.[0];
+  return {
+    id: e.id,
+    tipo: 'EMPRESA',
+    nif: e.cif || '',
+    nombreRazon: e.nombre || '',
+    email: contacto?.email || undefined,
+    telefono: contacto?.telefono || undefined,
+    direccion: {
+      calle: e.direccion?.calle || '',
+      codigoPostal: e.direccion?.codigoPostal || '',
+      poblacion: e.direccion?.poblacion || '',
+      provincia: e.direccion?.provincia || '',
+      pais: e.direccion?.pais || 'España',
+    },
+    esExterno: false,
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CLIENTES (combinación pacientes + empresas) — usado por SaluFact
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Busca clientes (pacientes y/o empresas) en el servidor local.
+ * Por NIF/CIF cae a `null` (cloud) porque el local solo conoce los de la
+ * propia clínica y se perdería la búsqueda cross-tenant.
+ */
+export async function localBuscarClientes(
+  termino: string,
+  tipo: 'todos' | 'pacientes' | 'empresas' = 'todos',
+  limite: number = 20
+): Promise<Cliente[] | null> {
+  const terminoLimpio = termino.toUpperCase().replace(/[^A-Z0-9]/g, '');
+  const pareceNifCif = /^[0-9XYZABCDEFGHJKLMNPQRSUVW]/.test(terminoLimpio) && terminoLimpio.length >= 6;
+  if (pareceNifCif) return null;
+
+  const available = await checkAvailability();
+  if (!available) return null;
+
+  const t0 = performance.now();
+  const resultados: Cliente[] = [];
+
+  if (tipo === 'todos' || tipo === 'pacientes') {
+    const r = await localPost<{ pacientes: RawPaciente[] }>('/pacientes/buscar', { termino, limite });
+    if (r?.pacientes) resultados.push(...r.pacientes.map(p => mapPacienteToCliente(p)));
+  }
+  if (tipo === 'todos' || tipo === 'empresas') {
+    const r = await localPost<{ empresas: RawEmpresa[] }>('/empresas/buscar', { termino, limite });
+    if (r?.empresas) resultados.push(...r.empresas.map(mapEmpresaToCliente));
+  }
+
+  resultados.sort((a, b) => a.nombreRazon.localeCompare(b.nombreRazon));
+  logLocal(`buscarClientes("${termino}")`, Math.round(performance.now() - t0), resultados.length);
+  return resultados.slice(0, limite);
+}
+
+/**
+ * Últimos clientes añadidos/modificados (modo "__recientes__").
+ * Si el local server está actualizado por el listener de Identity, refleja
+ * cambios de cualquier app del ecosistema.
+ */
+export async function localClientesRecientes(
+  tipo: 'todos' | 'pacientes' | 'empresas' = 'todos',
+  limite: number = 5
+): Promise<Cliente[] | null> {
+  const available = await checkAvailability();
+  if (!available) return null;
+
+  const t0 = performance.now();
+  const resultados: Cliente[] = [];
+
+  if (tipo === 'todos' || tipo === 'pacientes') {
+    const r = await localPost<{ pacientes: RawPaciente[] }>('/pacientes/recientes', { limite });
+    if (r?.pacientes) resultados.push(...r.pacientes.map(p => mapPacienteToCliente(p)));
+  }
+  if (tipo === 'todos' || tipo === 'empresas') {
+    const r = await localPost<{ empresas: RawEmpresa[] }>('/empresas/recientes', { limite });
+    if (r?.empresas) resultados.push(...r.empresas.map(mapEmpresaToCliente));
+  }
+
+  resultados.sort((a, b) => a.nombreRazon.localeCompare(b.nombreRazon));
+  logLocal(`clientesRecientes`, Math.round(performance.now() - t0), resultados.length);
+  return resultados.slice(0, limite);
+}
+
+export async function localObtenerCliente(
+  id: string,
+  tipo: 'PACIENTE' | 'EMPRESA'
+): Promise<Cliente | null | undefined> {
+  const available = await checkAvailability();
+  if (!available) return undefined;
+
+  if (tipo === 'PACIENTE') {
+    const r = await localPost<{ paciente: RawPaciente | null }>('/pacientes/obtener', { identityId: id });
+    if (r === null) return undefined;
+    return r.paciente ? mapPacienteToCliente(r.paciente) : null;
+  } else {
+    const r = await localPost<{ empresa: RawEmpresa | null }>('/empresas/obtener', { empresaId: id });
+    if (r === null) return undefined;
+    return r.empresa ? mapEmpresaToCliente(r.empresa) : null;
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PACIENTES (raw, sin mapeo a Cliente) — usado por SaluFile
+// ═══════════════════════════════════════════════════════════════════════════
+
+export async function localBuscarPacientes(
+  termino: string,
+  limite: number = 20
+): Promise<IdentityPaciente[] | null> {
+  const t0 = performance.now();
+  const result = await localPost<{ pacientes: IdentityPaciente[] }>('/pacientes/buscar', { termino, limite });
+  if (result?.pacientes) {
+    logLocal(`buscarPacientes("${termino}")`, Math.round(performance.now() - t0), result.pacientes.length);
+    return result.pacientes;
+  }
+  logCloud(`buscarPacientes("${termino}")`);
+  return null;
+}
+
+export async function localObtenerPaciente(
+  identityId: string
+): Promise<IdentityPaciente | null | undefined> {
+  const available = await checkAvailability();
+  if (!available) { logCloud(`obtenerPaciente(${identityId.slice(0, 8)}...)`); return undefined; }
+
+  const t0 = performance.now();
+  const result = await localPost<{ paciente: IdentityPaciente | null }>('/pacientes/obtener', { identityId });
+  if (result === null) { logCloud(`obtenerPaciente(${identityId.slice(0, 8)}...)`); return undefined; }
+  logLocal(`obtenerPaciente(${identityId.slice(0, 8)}...)`, Math.round(performance.now() - t0));
+  return result.paciente;
+}
+
+export async function localListarPacientesRecientes(
+  limite: number = 100
+): Promise<IdentityPaciente[] | null> {
+  const t0 = performance.now();
+  const result = await localPost<{ pacientes: IdentityPaciente[] }>('/pacientes/recientes', { limite });
+  if (result?.pacientes) {
+    logLocal('listarPacientesRecientes', Math.round(performance.now() - t0), result.pacientes.length);
+    return result.pacientes;
+  }
+  logCloud('listarPacientesRecientes');
+  return null;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// PROFESIONALES — usado por SaluFile (y potencialmente SaluFirst)
+// ═══════════════════════════════════════════════════════════════════════════
+
+export async function localListarProfesionales(
+  limite: number = 100,
+  soloActivos: boolean = true
+): Promise<IdentityProfesional[] | null> {
+  const t0 = performance.now();
+  const result = await localPost<{ success: boolean; profesionales: IdentityProfesional[] }>(
+    '/profesionales/listar',
+    { limite, soloActivos }
+  );
+  if (result?.profesionales) {
+    logLocal('listarProfesionales', Math.round(performance.now() - t0), result.profesionales.length);
+    return result.profesionales;
+  }
+  logCloud('listarProfesionales');
+  return null;
+}
+
+export async function localBuscarProfesionales(
+  query: string,
+  limite: number = 50
+): Promise<IdentityProfesional[] | null> {
+  const t0 = performance.now();
+  const result = await localPost<{ success: boolean; profesionales: IdentityProfesional[] }>(
+    '/profesionales/buscar',
+    { query, limite }
+  );
+  if (result?.profesionales) {
+    logLocal(`buscarProfesionales("${query}")`, Math.round(performance.now() - t0), result.profesionales.length);
+    return result.profesionales;
+  }
+  logCloud(`buscarProfesionales("${query}")`);
+  return null;
+}
+
+export async function localObtenerProfesional(
+  profesionalId: string
+): Promise<IdentityProfesional | null | undefined> {
+  const available = await checkAvailability();
+  if (!available) { logCloud('obtenerProfesional'); return undefined; }
+
+  const t0 = performance.now();
+  const result = await localPost<{ success: boolean; found: boolean; profesional: IdentityProfesional | null }>(
+    '/profesionales/obtener',
+    { profesionalId }
+  );
+  if (result === null) { logCloud('obtenerProfesional'); return undefined; }
+  logLocal('obtenerProfesional', Math.round(performance.now() - t0));
+  return result.profesional;
+}
+
+export async function localBuscarProfesionalPorUID(
+  uid: string
+): Promise<IdentityProfesional | null | undefined> {
+  const available = await checkAvailability();
+  if (!available) { logCloud('buscarProfesionalPorUID'); return undefined; }
+
+  const t0 = performance.now();
+  const result = await localPost<{ success: boolean; found: boolean; profesional: IdentityProfesional | null }>(
+    '/profesionales/buscarPorUID',
+    { uid }
+  );
+  if (result === null) { logCloud('buscarProfesionalPorUID'); return undefined; }
+  logLocal('buscarProfesionalPorUID', Math.round(performance.now() - t0));
+  return result.profesional;
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// CLINIC CONFIG
+// ═══════════════════════════════════════════════════════════════════════════
+
+export async function localGetClinicConfig(): Promise<Record<string, unknown> | null> {
+  const result = await localGet<{ config: Record<string, unknown> | null }>('/clinic/config');
+  return result?.config ?? null;
+}
