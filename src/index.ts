@@ -162,6 +162,17 @@ export function resetLocalServerCheck(): void {
   _availabilityPromise = null;
 }
 
+/**
+ * Garantiza que el probe de disponibilidad se ha ejecutado al menos una vez
+ * y devuelve el resultado. Útil para flujos que no hacen llamadas HTTP previas
+ * (e.g. `acceleratorWS.connect()`): sin esto, `getLocalServerUrl()` puede
+ * devolver el default `https://localhost:3501` antes de haber probado LAN /
+ * external, y los PCs remotos abren WSS contra un host incorrecto.
+ */
+export async function ensureLocalServerChecked(): Promise<boolean> {
+  return checkAvailability();
+}
+
 // ═══════════════════════════════════════════════════════════════════════════
 // LOGGING
 // ═══════════════════════════════════════════════════════════════════════════
