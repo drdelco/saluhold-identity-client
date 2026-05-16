@@ -109,6 +109,10 @@ const HEALTH_CHECK_INTERVAL = 30_000;
 const REQUEST_TIMEOUT = 3_000;
 
 let _configuredHost: string | null = null;
+// Host por túnel exterior (Tailscale, VPN). Se prueba DESPUÉS del LAN
+// para no añadir latencia a los PCs de la clínica que ya alcanzan el
+// servidor por la red local.
+let _configuredHostExternal: string | null = null;
 let _localServerUrl = `https://localhost:${LOCAL_HTTPS_PORT}`;
 let _isAvailable: boolean | null = null;
 let _lastCheck = 0;
@@ -129,6 +133,20 @@ export function setLocalServerHost(host: string | null | undefined): void {
   const normalised = (host || '').trim() || null;
   if (normalised === _configuredHost) return;
   _configuredHost = normalised;
+  _isAvailable = null;
+  _lastCheck = 0;
+}
+
+/**
+ * Configura el host por túnel exterior (Tailscale/VPN). Solo se prueba
+ * si fallan localhost + LAN host. Permite que dispositivos remotos en
+ * la mesh VPN del clínic alcancen el acelerador sin sacrificar la
+ * latencia de los PCs internos.
+ */
+export function setLocalServerHostExternal(host: string | null | undefined): void {
+  const normalised = (host || '').trim() || null;
+  if (normalised === _configuredHostExternal) return;
+  _configuredHostExternal = normalised;
   _isAvailable = null;
   _lastCheck = 0;
 }
@@ -172,10 +190,10 @@ function logCloud(fn: string) {
 // AVAILABILITY CHECK
 // ═══════════════════════════════════════════════════════════════════════════
 
-async function tryUrl(url: string): Promise<boolean> {
+async function tryUrl(url: string, timeoutMs = 1500): Promise<boolean> {
   try {
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 2000);
+    const timeout = setTimeout(() => controller.abort(), timeoutMs);
     const resp = await fetch(`${url}/health`, { signal: controller.signal });
     clearTimeout(timeout);
     return resp.ok;
@@ -196,18 +214,27 @@ async function checkAvailability(): Promise<boolean> {
 
   _availabilityPromise = (async () => {
     try {
-      // localhost HTTPS primero (cert trusted via mkcert; sin warning)
+      // 1) localhost (mismo PC) — cert trusted via mkcert, sin warning
       const localhostUrl = `https://localhost:${LOCAL_HTTPS_PORT}`;
       if (await tryUrl(localhostUrl)) {
         _localServerUrl = localhostUrl;
         _isAvailable = true; _lastCheck = Date.now(); return true;
       }
-      // LAN HTTPS si hay host configurado (requiere root CA distribuido
-      // o aceptación de cert una vez por navegador)
+      // 2) LAN — PCs de la red local de la clínica
       if (_configuredHost) {
         const networkUrl = `https://${_configuredHost}:${LOCAL_HTTPS_PORT}`;
         if (await tryUrl(networkUrl)) {
           _localServerUrl = networkUrl;
+          _isAvailable = true; _lastCheck = Date.now(); return true;
+        }
+      }
+      // 3) Túnel exterior (Tailscale, VPN) — dispositivos remotos en
+      //    la mesh VPN. Se prueba el último para no añadir latencia a
+      //    los PCs internos.
+      if (_configuredHostExternal) {
+        const externalUrl = `https://${_configuredHostExternal}:${LOCAL_HTTPS_PORT}`;
+        if (await tryUrl(externalUrl)) {
+          _localServerUrl = externalUrl;
           _isAvailable = true; _lastCheck = Date.now(); return true;
         }
       }
