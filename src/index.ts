@@ -101,13 +101,15 @@ export interface IdentityProfesional {
 // ESTADO Y CONFIGURACIÓN DE CONEXIÓN
 // ═══════════════════════════════════════════════════════════════════════════
 
-const LOCAL_HTTP_PORT = 3500;        // localhost-only HTTP
-const LOCAL_HTTPS_PORT = 3501;       // LAN HTTPS (requerido por Mixed Content)
+// PUERTO ÚNICO HTTPS (cert trusted vía mkcert). Eliminamos el antiguo
+// dual-port 3500 HTTP + 3501 HTTPS para evitar incongruencias y aprovechar
+// que mkcert ya elimina el warning "Not secure" en localhost.
+const LOCAL_HTTPS_PORT = 3501;
 const HEALTH_CHECK_INTERVAL = 30_000;
 const REQUEST_TIMEOUT = 3_000;
 
 let _configuredHost: string | null = null;
-let _localServerUrl = `http://localhost:${LOCAL_HTTP_PORT}`;
+let _localServerUrl = `https://localhost:${LOCAL_HTTPS_PORT}`;
 let _isAvailable: boolean | null = null;
 let _lastCheck = 0;
 // Promise en vuelo del check de disponibilidad — evita race condition
@@ -194,13 +196,14 @@ async function checkAvailability(): Promise<boolean> {
 
   _availabilityPromise = (async () => {
     try {
-      // localhost HTTP primero (browsers permiten HTTP→localhost desde HTTPS)
-      const localhostUrl = `http://localhost:${LOCAL_HTTP_PORT}`;
+      // localhost HTTPS primero (cert trusted via mkcert; sin warning)
+      const localhostUrl = `https://localhost:${LOCAL_HTTPS_PORT}`;
       if (await tryUrl(localhostUrl)) {
         _localServerUrl = localhostUrl;
         _isAvailable = true; _lastCheck = Date.now(); return true;
       }
-      // LAN HTTPS si hay host configurado
+      // LAN HTTPS si hay host configurado (requiere root CA distribuido
+      // o aceptación de cert una vez por navegador)
       if (_configuredHost) {
         const networkUrl = `https://${_configuredHost}:${LOCAL_HTTPS_PORT}`;
         if (await tryUrl(networkUrl)) {
