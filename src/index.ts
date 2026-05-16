@@ -110,6 +110,11 @@ let _configuredHost: string | null = null;
 let _localServerUrl = `http://localhost:${LOCAL_HTTP_PORT}`;
 let _isAvailable: boolean | null = null;
 let _lastCheck = 0;
+// Promise en vuelo del check de disponibilidad — evita race condition
+// cuando N callers concurrentes encuentran `_isAvailable === null` y
+// disparan N fetch /health en paralelo agotando el connection pool de
+// Chrome (síntoma: ERR_INSUFFICIENT_RESOURCES).
+let _availabilityPromise: Promise<boolean> | null = null;
 
 const _stats = { localHits: 0, cloudFallbacks: 0 };
 
@@ -134,6 +139,7 @@ export function getLocalServerStats() { return { ..._stats, isAvailable: _isAvai
 export function resetLocalServerCheck(): void {
   _isAvailable = null;
   _lastCheck = 0;
+  _availabilityPromise = null;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
@@ -181,21 +187,33 @@ async function checkAvailability(): Promise<boolean> {
   if (_isAvailable !== null && now - _lastCheck < HEALTH_CHECK_INTERVAL) {
     return _isAvailable;
   }
-  // localhost HTTP primero (los browsers permiten HTTP→localhost desde HTTPS)
-  const localhostUrl = `http://localhost:${LOCAL_HTTP_PORT}`;
-  if (await tryUrl(localhostUrl)) {
-    _localServerUrl = localhostUrl;
-    _isAvailable = true; _lastCheck = now; return true;
-  }
-  // LAN HTTPS si hay host configurado
-  if (_configuredHost) {
-    const networkUrl = `https://${_configuredHost}:${LOCAL_HTTPS_PORT}`;
-    if (await tryUrl(networkUrl)) {
-      _localServerUrl = networkUrl;
-      _isAvailable = true; _lastCheck = now; return true;
+  // Si ya hay un check en vuelo, comparte su promesa con todos los
+  // callers concurrentes (evita ERR_INSUFFICIENT_RESOURCES por N
+  // fetch /health paralelos).
+  if (_availabilityPromise) return _availabilityPromise;
+
+  _availabilityPromise = (async () => {
+    try {
+      // localhost HTTP primero (browsers permiten HTTP→localhost desde HTTPS)
+      const localhostUrl = `http://localhost:${LOCAL_HTTP_PORT}`;
+      if (await tryUrl(localhostUrl)) {
+        _localServerUrl = localhostUrl;
+        _isAvailable = true; _lastCheck = Date.now(); return true;
+      }
+      // LAN HTTPS si hay host configurado
+      if (_configuredHost) {
+        const networkUrl = `https://${_configuredHost}:${LOCAL_HTTPS_PORT}`;
+        if (await tryUrl(networkUrl)) {
+          _localServerUrl = networkUrl;
+          _isAvailable = true; _lastCheck = Date.now(); return true;
+        }
+      }
+      _isAvailable = false; _lastCheck = Date.now(); return false;
+    } finally {
+      _availabilityPromise = null;
     }
-  }
-  _isAvailable = false; _lastCheck = now; return false;
+  })();
+  return _availabilityPromise;
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
