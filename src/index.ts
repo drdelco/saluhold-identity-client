@@ -373,6 +373,13 @@ export async function localBuscarClientes(
   }
   if (tipo === 'todos' || tipo === 'empresas') {
     const r = await localPost<{ empresas: RawEmpresa[] }>('/empresas/buscar', { termino, limite });
+    if (r === null) {
+      // El acelerador local NO expone /empresas/buscar (a partir del rebajado
+      // de SaluFile de 2026-05-18: empresas pasan al acelerador propio de
+      // SaluFact). Devolvemos null para forzar fallback cloud en el caller
+      // (la CF `buscarClientes` sí devuelve empresas + pacientes correctos).
+      return null;
+    }
     if (r?.empresas) resultados.push(...r.empresas.map(mapEmpresaToCliente));
   }
 
@@ -402,6 +409,11 @@ export async function localClientesRecientes(
   }
   if (tipo === 'todos' || tipo === 'empresas') {
     const r = await localPost<{ empresas: RawEmpresa[] }>('/empresas/recientes', { limite });
+    if (r === null) {
+      // Mismo razonamiento que en localBuscarClientes: si /empresas/* no
+      // está disponible, devolvemos null para forzar fallback cloud.
+      return null;
+    }
     if (r?.empresas) resultados.push(...r.empresas.map(mapEmpresaToCliente));
   }
 
