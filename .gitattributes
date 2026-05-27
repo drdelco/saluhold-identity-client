@@ -1,0 +1,36 @@
+# Normaliza line endings a LF en el repo y en el working tree de todas las máquinas.
+# Sin esto, en Windows con core.autocrlf=true Git convierte LF→CRLF en checkout y
+# vuelve a CRLF→LF en commit, lo que provoca que tras cualquier build los ficheros
+# aparezcan como "modificados" (warnings "LF will be replaced by CRLF" al hacer
+# `git add` de dist/* o cualquier blob regenerado).
+#
+# Si alguien ya tiene checkout previo a este fichero, debe ejecutar UNA vez:
+#   git add --renormalize .
+#   git commit -m "chore: normalize line endings to LF"
+# para reescribir los ficheros del índice con LF.
+
+* text=auto eol=lf
+
+# Binarios explícitos (no normalizar) — defensa por si autodetección falla.
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.webp  binary
+*.pdf   binary
+*.zip   binary
+*.gz    binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.otf   binary
+*.eot   binary
+*.mp3   binary
+*.mp4   binary
+*.wav   binary
+
+# Scripts Windows: forzar CRLF — cmd.exe se rompe con LF en algunos casos.
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+*.ps1   text eol=crlf
