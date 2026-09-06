@@ -562,3 +562,16 @@ export async function localGetClinicConfig(): Promise<Record<string, unknown> | 
   const result = await localGet<{ config: Record<string, unknown> | null }>('/clinic/config');
   return result?.config ?? null;
 }
+
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Identificador personal (DNI / NIE / pasaporte / CIF)
+// ─────────────────────────────────────────────────────────────────────────────
+export {
+  normalizarIdentificador,
+  canonizarIdentificador,
+  tipoDeIdentificador,
+  validarIdentificador,
+  identificadorAceptable,
+} from './identificador';
+export type { TipoIdentificador, ResultadoValidacion } from './identificador';
