@@ -575,3 +575,17 @@ export {
   identificadorAceptable,
 } from './identificador';
 export type { TipoIdentificador, ResultadoValidacion } from './identificador';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Sexo (H / M / O) — codec único de la suite
+// ─────────────────────────────────────────────────────────────────────────────
+export {
+  OPCIONES_SEXO,
+  sexoADisplay,
+  displayASexo,
+  comoSexoIdentity,
+  esHombre,
+  esMujer,
+  sexoDesdeExterno,
+} from './sexo';
+export type { SexoIdentity, SexoDisplay } from './sexo';
