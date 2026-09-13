@@ -69,6 +69,20 @@ export function setLocalServerHostExternal(host) {
     _isAvailable = null;
     _lastCheck = 0;
 }
+/**
+ * ¿Hay algún host de acelerador configurado?
+ *
+ * Sirve para NO sondear cuando no hay nada que sondear. Una clínica sin
+ * acelerador —el caso más común— no tiene por qué intentar tres conexiones cada
+ * minuto para siempre: no hay servidor, o no se quiere usar. Sin esto, el
+ * testigo del acelerador convierte el caso normal en ruido de red permanente.
+ *
+ * `localhost` no cuenta como configuración: se prueba igualmente cuando hay
+ * algún host puesto, porque el PC servidor se alcanza a sí mismo por ahí.
+ */
+export function hayAceleradorConfigurado() {
+    return _configuredHost !== null || _configuredHostExternal !== null;
+}
 export function getLocalServerUrl() { return _localServerUrl; }
 export function isLocalServerAvailable() { return _isAvailable; }
 export function getLocalServerStats() { return { ..._stats, isAvailable: _isAvailable }; }

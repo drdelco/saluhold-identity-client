@@ -21,7 +21,7 @@
  * a Cloud Functions o mostrar un error.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.comprimirParaIA = exports.sexoDesdeExterno = exports.esMujer = exports.esHombre = exports.comoSexoIdentity = exports.displayASexo = exports.sexoADisplay = exports.OPCIONES_SEXO = exports.identificadorAceptable = exports.validarIdentificador = exports.tipoDeIdentificador = exports.canonizarIdentificador = exports.normalizarIdentificador = exports.localGetClinicConfig = exports.localBuscarProfesionalPorUID = exports.localObtenerProfesional = exports.localBuscarProfesionales = exports.localListarProfesionales = exports.localListarPacientesRecientes = exports.localObtenerPaciente = exports.localBuscarPacientes = exports.localObtenerCliente = exports.localClientesRecientes = exports.localBuscarClientes = exports.mapEmpresaToCliente = exports.mapPacienteToCliente = exports.localGet = exports.localPost = exports.getAcceleratorToken = exports.setAcceleratorToken = exports.ensureLocalServerChecked = exports.resetLocalServerCheck = exports.getLocalServerStats = exports.isLocalServerAvailable = exports.getLocalServerUrl = exports.setLocalServerHostExternal = exports.setLocalServerHost = void 0;
+exports.comprimirParaIA = exports.sexoDesdeExterno = exports.esMujer = exports.esHombre = exports.comoSexoIdentity = exports.displayASexo = exports.sexoADisplay = exports.OPCIONES_SEXO = exports.identificadorAceptable = exports.validarIdentificador = exports.tipoDeIdentificador = exports.canonizarIdentificador = exports.normalizarIdentificador = exports.localGetClinicConfig = exports.localBuscarProfesionalPorUID = exports.localObtenerProfesional = exports.localBuscarProfesionales = exports.localListarProfesionales = exports.localListarPacientesRecientes = exports.localObtenerPaciente = exports.localBuscarPacientes = exports.localObtenerCliente = exports.localClientesRecientes = exports.localBuscarClientes = exports.mapEmpresaToCliente = exports.mapPacienteToCliente = exports.localGet = exports.localPost = exports.getAcceleratorToken = exports.setAcceleratorToken = exports.ensureLocalServerChecked = exports.resetLocalServerCheck = exports.getLocalServerStats = exports.isLocalServerAvailable = exports.getLocalServerUrl = exports.hayAceleradorConfigurado = exports.setLocalServerHostExternal = exports.setLocalServerHost = void 0;
 // ═══════════════════════════════════════════════════════════════════════════
 // ESTADO Y CONFIGURACIÓN DE CONEXIÓN
 // ═══════════════════════════════════════════════════════════════════════════
@@ -74,6 +74,21 @@ function setLocalServerHostExternal(host) {
     _lastCheck = 0;
 }
 exports.setLocalServerHostExternal = setLocalServerHostExternal;
+/**
+ * ¿Hay algún host de acelerador configurado?
+ *
+ * Sirve para NO sondear cuando no hay nada que sondear. Una clínica sin
+ * acelerador —el caso más común— no tiene por qué intentar tres conexiones cada
+ * minuto para siempre: no hay servidor, o no se quiere usar. Sin esto, el
+ * testigo del acelerador convierte el caso normal en ruido de red permanente.
+ *
+ * `localhost` no cuenta como configuración: se prueba igualmente cuando hay
+ * algún host puesto, porque el PC servidor se alcanza a sí mismo por ahí.
+ */
+function hayAceleradorConfigurado() {
+    return _configuredHost !== null || _configuredHostExternal !== null;
+}
+exports.hayAceleradorConfigurado = hayAceleradorConfigurado;
 function getLocalServerUrl() { return _localServerUrl; }
 exports.getLocalServerUrl = getLocalServerUrl;
 function isLocalServerAvailable() { return _isAvailable; }
