@@ -1,26 +1,26 @@
 // sesionEscaneo.ts — puente escritorio → móvil para leer un documento.
 //
 // El escritorio no tiene una cámara decente y el móvil sí. El escritorio abre
-// una "sesión de escaneo" (un documento efímero en Firestore) y muestra su id
-// como QR; el móvil, identificado en la misma clínica, fotografía el documento,
-// lo lee con la IA de Identity y deja SOLO el resultado (los campos extraídos)
-// en la sesión. El escritorio, que está escuchando, lo recoge y sigue
-// exactamente el mismo camino que si la foto se hubiera hecho allí: búsqueda
-// por NIF primero, y solo después crear.
+// una sesión, la enseña como QR y espera; el móvil fotografía el documento, lo
+// lee y deja SOLO los campos extraídos en la sesión. El escritorio, que está
+// escuchando, los recoge y sigue exactamente el mismo camino que si la foto se
+// hubiera hecho allí: búsqueda por NIF primero, y solo después crear.
 //
-// La foto no viaja por aquí ni se guarda en ningún sitio: la lee el propio
-// móvil. En la sesión solo quedan los campos, y el doc muere al consumirse (lo
-// borra el escritorio) o por TTL a los 10 minutos.
+// La sesión vive en IDENTITY (`scan_sessions/{id}`), no en la base de cada app:
+// así el mismo código sirve a SaluFile, SaluFirst y SaluFact, y la página donde
+// el móvil hace la foto es una sola.
 //
-// Ubicación: `clinics/{clinicId}/scan_sessions/{sessionId}` en la base que la
-// app haya configurado. El aislamiento por clínica lo dan las reglas: cualquier
-// profesional identificado de la MISMA clínica puede atender la sesión (la
-// recepcionista abre el QR, el médico lo escanea con su móvil).
+// Abrir, crear y completar pasan por callables de Identity porque son las
+// únicas que pueden comprobar de qué clínica es quien llama (el claim
+// `clinicaId` vive en el Auth de la app destino, no en el de Identity). Lo
+// único que se hace directo contra Firestore es ESCUCHAR la sesión propia, que
+// es lo que permite al escritorio enterarse al instante.
+//
+// La foto no viaja por aquí ni se guarda: la lee el móvil. En la sesión solo
+// quedan los campos, y el documento muere al consumirse o a los diez minutos.
 
-import {
-  collection, doc, getDoc, setDoc, updateDoc, deleteDoc, onSnapshot,
-  serverTimestamp, Timestamp, type Unsubscribe,
-} from 'firebase/firestore';
+import { doc, deleteDoc, onSnapshot, type Timestamp, type Unsubscribe } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import { config } from './config';
 import type { LecturaOk } from './documento';
 
@@ -29,7 +29,7 @@ export const SCAN_SESSION_TTL_MIN = 10;
 export type EstadoSesion = 'pending' | 'scanning' | 'done';
 
 export interface ScanSession {
-  clinicId: string;
+  clinicaId: string;
   createdBy: string;
   status: EstadoSesion;
   createdAt: Timestamp | null;
@@ -47,19 +47,17 @@ function qr() {
   return c.qr;
 }
 
-function ref(clinicId: string, sessionId: string) {
-  return doc(qr().db, 'clinics', clinicId, 'scan_sessions', sessionId);
-}
-
-function clinicaActiva(): string {
-  const id = config().clinicaId();
-  if (!id) throw new Error('No hay clínica activa.');
-  return id;
+async function llamar<I, O>(nombre: string, datos: I): Promise<O> {
+  const c = config();
+  if (c.initIdentity) await c.initIdentity();
+  const fn = httpsCallable<I & { clinicaId?: string }, O>(c.identityFunctions(), nombre);
+  const res = await fn({ ...datos, clinicaId: c.clinicaId() || undefined } as I & { clinicaId?: string });
+  return res.data;
 }
 
 /** URL que codifica el QR: la página donde el móvil hace la foto. */
 export function urlDeSesion(sessionId: string): string {
-  return qr().urlSesion(clinicaActiva(), sessionId);
+  return qr().urlSesion(config().clinicaId() || '', sessionId);
 }
 
 export function sesionCaducada(s: Pick<ScanSession, 'expiresAt'>): boolean {
@@ -68,35 +66,25 @@ export function sesionCaducada(s: Pick<ScanSession, 'expiresAt'>): boolean {
 
 /** Escritorio: abre una sesión nueva en la clínica activa. */
 export async function crearSesionEscaneo(): Promise<{ id: string; expiresAt: Date }> {
-  const { db, auth } = qr();
-  const uid = auth.currentUser?.uid;
-  const clinicId = clinicaActiva();
-  if (!uid) throw new Error('No hay sesión de usuario activa.');
-
-  const nueva = doc(collection(db, 'clinics', clinicId, 'scan_sessions'));
-  const expiresAt = new Date(Date.now() + SCAN_SESSION_TTL_MIN * 60_000);
-  await setDoc(nueva, {
-    clinicId,
-    createdBy: uid,
-    status: 'pending',
-    createdAt: serverTimestamp(),
-    expiresAt: Timestamp.fromDate(expiresAt),
-    lectura: null,
-    scanningBy: null,
-    doneBy: null,
-    doneAt: null,
-  });
-  return { id: nueva.id, expiresAt };
+  const r = await llamar<Record<string, never>, { id: string; expiresAt: string }>(
+    'crearSesionEscaneo', {} as Record<string, never>,
+  );
+  return { id: r.id, expiresAt: new Date(r.expiresAt) };
 }
 
-/** Escritorio: escucha la sesión hasta que el móvil la complete. */
+/**
+ * Escritorio: escucha su sesión hasta que el móvil la complete.
+ *
+ * Va directo a Firestore de Identity: las reglas dejan leer solo las sesiones
+ * que uno mismo ha abierto, que es justo este caso.
+ */
 export function escucharSesion(
   sessionId: string,
   onCambio: (s: ScanSession | null) => void,
   onError: (e: Error) => void,
 ): Unsubscribe {
   return onSnapshot(
-    ref(clinicaActiva(), sessionId),
+    doc(qr().db, 'scan_sessions', sessionId),
     (snap) => onCambio(snap.exists() ? (snap.data() as ScanSession) : null),
     (e) => onError(e),
   );
@@ -104,36 +92,17 @@ export function escucharSesion(
 
 /** Escritorio: la sesión ya se consumió (o se cerró el modal). */
 export async function borrarSesion(sessionId: string): Promise<void> {
-  try { await deleteDoc(ref(clinicaActiva(), sessionId)); } catch { /* ya no existe */ }
+  try { await deleteDoc(doc(qr().db, 'scan_sessions', sessionId)); } catch { /* ya no existe */ }
 }
 
-/** Móvil: lee la sesión que abre el QR. */
-export async function leerSesion(clinicId: string, sessionId: string): Promise<ScanSession | null> {
-  const snap = await getDoc(ref(clinicId, sessionId));
-  return snap.exists() ? (snap.data() as ScanSession) : null;
-}
-
-/** Móvil: avisa al escritorio de que alguien ha abierto el QR. */
-export async function marcarEscaneando(clinicId: string, sessionId: string): Promise<void> {
-  await updateDoc(ref(clinicId, sessionId), {
-    status: 'scanning',
-    scanningBy: qr().auth.currentUser?.uid ?? null,
-  });
+/** Móvil: abre la sesión del QR y avisa al escritorio de que hay alguien. */
+export async function abrirSesion(
+  sessionId: string,
+): Promise<{ id: string; status: EstadoSesion; expiresAt: string }> {
+  return llamar('abrirSesionEscaneo', { sessionId });
 }
 
 /** Móvil: deja el resultado de la lectura para el escritorio. */
-export async function completarSesion(
-  clinicId: string,
-  sessionId: string,
-  lectura: LecturaOk,
-): Promise<void> {
-  await updateDoc(ref(clinicId, sessionId), {
-    status: 'done',
-    // Respuesta JSON de la callable: sin undefined ni Timestamps. Se pasa por
-    // JSON igualmente para que un campo ausente nunca llegue como undefined,
-    // que Firestore rechaza.
-    lectura: JSON.parse(JSON.stringify(lectura)),
-    doneBy: qr().auth.currentUser?.uid ?? null,
-    doneAt: serverTimestamp(),
-  });
+export async function completarSesion(sessionId: string, lectura: LecturaOk): Promise<void> {
+  await llamar('completarSesionEscaneo', { sessionId, lectura });
 }

@@ -589,3 +589,8 @@ export {
   sexoDesdeExterno,
 } from './sexo';
 export type { SexoIdentity, SexoDisplay } from './sexo';
+
+// Compresor de imagen para el lector de documentos. Vive con el escáner pero
+// no usa React ni Mantine, así que se ofrece también desde el núcleo: lo
+// necesita el portal de Identity, que es Tailwind.
+export { comprimirParaIA, type ImagenParaIA } from './ui/imagen';

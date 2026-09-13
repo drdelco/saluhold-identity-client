@@ -13,7 +13,6 @@
 
 import type { Functions } from 'firebase/functions';
 import type { Firestore } from 'firebase/firestore';
-import type { Auth } from 'firebase/auth';
 
 /**
  * Un paciente que ya existe con ese documento.
@@ -50,9 +49,8 @@ export interface ConfigEscaner {
    * —mejor no enseñar un camino que no lleva a ninguna parte—.
    */
   qr?: {
-    /** Dónde viven las sesiones de escaneo. */
+    /** Firestore de IDENTITY: las sesiones viven allí, no en la base de la app. */
     db: Firestore;
-    auth: Auth;
     /** URL que codifica el QR: la página donde el móvil hace la foto. */
     urlSesion: (clinicaId: string, sessionId: string) => string;
   };
