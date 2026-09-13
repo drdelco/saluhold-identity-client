@@ -21,7 +21,7 @@
  * a Cloud Functions o mostrar un error.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.comprimirParaIA = exports.sexoDesdeExterno = exports.esMujer = exports.esHombre = exports.comoSexoIdentity = exports.displayASexo = exports.sexoADisplay = exports.OPCIONES_SEXO = exports.identificadorAceptable = exports.validarIdentificador = exports.tipoDeIdentificador = exports.canonizarIdentificador = exports.normalizarIdentificador = exports.localGetClinicConfig = exports.localBuscarProfesionalPorUID = exports.localObtenerProfesional = exports.localBuscarProfesionales = exports.localListarProfesionales = exports.localListarPacientesRecientes = exports.localObtenerPaciente = exports.localBuscarPacientes = exports.localObtenerCliente = exports.localClientesRecientes = exports.localBuscarClientes = exports.mapEmpresaToCliente = exports.mapPacienteToCliente = exports.localGet = exports.localPost = exports.getAcceleratorToken = exports.setAcceleratorToken = exports.ensureLocalServerChecked = exports.resetLocalServerCheck = exports.getLocalServerStats = exports.isLocalServerAvailable = exports.getLocalServerUrl = exports.hayAceleradorConfigurado = exports.setLocalServerHostExternal = exports.setLocalServerHost = void 0;
+exports.construirDatosAlta = exports.validarAlta = exports.aplicarLecturaAlAlta = exports.pide = exports.PERFILES_ALTA = exports.FORM_ALTA_VACIO = exports.comprimirParaIA = exports.sexoDesdeExterno = exports.esMujer = exports.esHombre = exports.comoSexoIdentity = exports.displayASexo = exports.sexoADisplay = exports.OPCIONES_SEXO = exports.identificadorAceptable = exports.validarIdentificador = exports.tipoDeIdentificador = exports.canonizarIdentificador = exports.normalizarIdentificador = exports.localGetClinicConfig = exports.localBuscarProfesionalPorUID = exports.localObtenerProfesional = exports.localBuscarProfesionales = exports.localListarProfesionales = exports.localListarPacientesRecientes = exports.localObtenerPaciente = exports.localBuscarPacientes = exports.localObtenerCliente = exports.localClientesRecientes = exports.localBuscarClientes = exports.mapEmpresaToCliente = exports.mapPacienteToCliente = exports.localGet = exports.localPost = exports.getAcceleratorToken = exports.setAcceleratorToken = exports.ensureLocalServerChecked = exports.resetLocalServerCheck = exports.getLocalServerStats = exports.isLocalServerAvailable = exports.getLocalServerUrl = exports.hayAceleradorConfigurado = exports.setLocalServerHostExternal = exports.setLocalServerHost = void 0;
 // ═══════════════════════════════════════════════════════════════════════════
 // ESTADO Y CONFIGURACIÓN DE CONEXIÓN
 // ═══════════════════════════════════════════════════════════════════════════
@@ -541,4 +541,24 @@ Object.defineProperty(exports, "sexoDesdeExterno", { enumerable: true, get: func
 // necesita el portal de Identity, que es Tailwind.
 var imagen_1 = require("./ui/imagen");
 Object.defineProperty(exports, "comprimirParaIA", { enumerable: true, get: function () { return imagen_1.comprimirParaIA; } });
+// ═══════════════════════════════════════════════════════════════════════════
+// MODELO DEL ALTA DE PACIENTE
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Se re-exporta desde la raíz —y no solo desde `/ui`— porque NO depende de
+// React ni de Mantine: son los perfiles de cada app, la validación y la
+// construcción del payload. Lo único que pinta React es la PANTALLA
+// (`CamposAltaPaciente`), que se queda en `/ui`.
+//
+// Quien lo necesita es la app nativa: está en React Native, así que no puede
+// usar el componente, pero sí debe construir el payload igual que las demás.
+// Esa es justo la parte donde la divergencia hace daño — de ahí salió que
+// SaluFact borrara la fecha de nacimiento en cada edición.
+var altaPaciente_1 = require("./ui/altaPaciente");
+Object.defineProperty(exports, "FORM_ALTA_VACIO", { enumerable: true, get: function () { return altaPaciente_1.FORM_ALTA_VACIO; } });
+Object.defineProperty(exports, "PERFILES_ALTA", { enumerable: true, get: function () { return altaPaciente_1.PERFILES_ALTA; } });
+Object.defineProperty(exports, "pide", { enumerable: true, get: function () { return altaPaciente_1.pide; } });
+Object.defineProperty(exports, "aplicarLecturaAlAlta", { enumerable: true, get: function () { return altaPaciente_1.aplicarLecturaAlAlta; } });
+Object.defineProperty(exports, "validarAlta", { enumerable: true, get: function () { return altaPaciente_1.validarAlta; } });
+Object.defineProperty(exports, "construirDatosAlta", { enumerable: true, get: function () { return altaPaciente_1.construirDatosAlta; } });
 //# sourceMappingURL=index.js.map

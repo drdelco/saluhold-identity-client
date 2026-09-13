@@ -500,4 +500,18 @@ export { OPCIONES_SEXO, sexoADisplay, displayASexo, comoSexoIdentity, esHombre, 
 // no usa React ni Mantine, así que se ofrece también desde el núcleo: lo
 // necesita el portal de Identity, que es Tailwind.
 export { comprimirParaIA } from './ui/imagen';
+// ═══════════════════════════════════════════════════════════════════════════
+// MODELO DEL ALTA DE PACIENTE
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// Se re-exporta desde la raíz —y no solo desde `/ui`— porque NO depende de
+// React ni de Mantine: son los perfiles de cada app, la validación y la
+// construcción del payload. Lo único que pinta React es la PANTALLA
+// (`CamposAltaPaciente`), que se queda en `/ui`.
+//
+// Quien lo necesita es la app nativa: está en React Native, así que no puede
+// usar el componente, pero sí debe construir el payload igual que las demás.
+// Esa es justo la parte donde la divergencia hace daño — de ahí salió que
+// SaluFact borrara la fecha de nacimiento en cada edición.
+export { FORM_ALTA_VACIO, PERFILES_ALTA, pide, aplicarLecturaAlAlta, validarAlta, construirDatosAlta, } from './ui/altaPaciente';
 //# sourceMappingURL=index.js.map
