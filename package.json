@@ -1,6 +1,6 @@
 {
   "name": "@saluhold/identity-client",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Cliente JS compartido para el Local Server SaluHold (lectura de pacientes/empresas en Identity con caché local) y componentes de UI comunes a SaluFile, SaluFact y SaluFirst. Fuente única de verdad.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -8,20 +8,27 @@
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "import": "./dist/index.js",
+      "require": "./dist-cjs/index.js"
     },
     "./ui": {
       "types": "./dist/ui/index.d.ts",
-      "default": "./dist/ui/index.js"
+      "import": "./dist/ui/index.js"
+    },
+    "./servidor": {
+      "types": "./dist/servidor/index.d.ts",
+      "import": "./dist/servidor/index.js",
+      "require": "./dist-cjs/servidor/index.js"
     }
   },
   "scripts": {
-    "build": "tsc",
+    "build": "tsc && tsc -p tsconfig.cjs.json && node scripts/marcar-modulos.cjs",
     "watch": "tsc --watch",
-    "prepare": "tsc"
+    "prepare": "npm run build"
   },
   "files": [
     "dist",
+    "dist-cjs",
     "src"
   ],
   "peerDependencies": {

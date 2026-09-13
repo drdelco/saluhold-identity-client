@@ -1,0 +1,25 @@
+// Segunda compilación, a CommonJS, para las Cloud Functions.
+//
+// Las functions de las cuatro apps corren CommonJS, así que sin esto no podían
+// importar nada del paquete y acababan con su propia copia de cada regla: el
+// codec del sexo estaba duplicado dos veces y la vinculación de pacientes,
+// seis. Compilar dos veces sale mucho más barato que mantener esas copias.
+//
+// `src/ui` queda fuera: son componentes de React con Mantine y en un backend no
+// pintan nada. Por eso la subruta `/ui` solo declara `import` en el mapa de
+// `exports`.
+//
+// Los tipos los genera la compilación ESM (`dist/`), que es la que los declara;
+// aquí solo hace falta el JavaScript.
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "module": "CommonJS",
+    "moduleResolution": "Node",
+    "outDir": "dist-cjs",
+    "declaration": false,
+    "declarationMap": false
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist", "dist-cjs", "src/ui"]
+}
