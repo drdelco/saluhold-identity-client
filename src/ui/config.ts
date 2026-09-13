@@ -49,8 +49,9 @@ export interface ConfigEscaner {
    * —mejor no enseñar un camino que no lleva a ninguna parte—.
    */
   qr?: {
-    /** Firestore de IDENTITY: las sesiones viven allí, no en la base de la app. */
-    db: Firestore;
+    /** Firestore de IDENTITY: las sesiones viven allí, no en la base de la app.
+     *  Función, como todo lo demás: Identity no existe hasta después del login. */
+    db: () => Firestore;
     /** URL que codifica el QR: la página donde el móvil hace la foto. */
     urlSesion: (clinicaId: string, sessionId: string) => string;
   };

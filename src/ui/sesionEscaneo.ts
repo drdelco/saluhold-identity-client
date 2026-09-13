@@ -84,7 +84,7 @@ export function escucharSesion(
   onError: (e: Error) => void,
 ): Unsubscribe {
   return onSnapshot(
-    doc(qr().db, 'scan_sessions', sessionId),
+    doc(qr().db(), 'scan_sessions', sessionId),
     (snap) => onCambio(snap.exists() ? (snap.data() as ScanSession) : null),
     (e) => onError(e),
   );
@@ -92,7 +92,7 @@ export function escucharSesion(
 
 /** Escritorio: la sesión ya se consumió (o se cerró el modal). */
 export async function borrarSesion(sessionId: string): Promise<void> {
-  try { await deleteDoc(doc(qr().db, 'scan_sessions', sessionId)); } catch { /* ya no existe */ }
+  try { await deleteDoc(doc(qr().db(), 'scan_sessions', sessionId)); } catch { /* ya no existe */ }
 }
 
 /** Móvil: abre la sesión del QR y avisa al escritorio de que hay alguien. */
