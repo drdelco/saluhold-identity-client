@@ -23,14 +23,19 @@
   },
   "typesVersions": {
     "*": {
-      "ui": ["dist/ui/index.d.ts"],
-      "servidor": ["dist/servidor/index.d.ts"]
+      "ui": [
+        "dist/ui/index.d.ts"
+      ],
+      "servidor": [
+        "dist/servidor/index.d.ts"
+      ]
     }
   },
   "scripts": {
     "build": "tsc && tsc -p tsconfig.cjs.json && node scripts/marcar-modulos.cjs",
     "watch": "tsc --watch",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "sync": "npm run build && node scripts/sincronizar-backends.cjs"
   },
   "files": [
     "dist",
@@ -45,11 +50,21 @@
     "react": "^18.0.0 || ^19.0.0"
   },
   "peerDependenciesMeta": {
-    "@mantine/core": { "optional": true },
-    "firebase": { "optional": true },
-    "lucide-react": { "optional": true },
-    "qrcode": { "optional": true },
-    "react": { "optional": true }
+    "@mantine/core": {
+      "optional": true
+    },
+    "firebase": {
+      "optional": true
+    },
+    "lucide-react": {
+      "optional": true
+    },
+    "qrcode": {
+      "optional": true
+    },
+    "react": {
+      "optional": true
+    }
   },
   "devDependencies": {
     "@mantine/core": "^8.3.14",
