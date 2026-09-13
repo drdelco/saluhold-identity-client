@@ -34,8 +34,7 @@
   "scripts": {
     "build": "tsc && tsc -p tsconfig.cjs.json && node scripts/marcar-modulos.cjs",
     "watch": "tsc --watch",
-    "prepare": "npm run build",
-    "sync": "npm run build && node scripts/sincronizar-backends.cjs"
+    "prepare": "npm run build"
   },
   "files": [
     "dist",
