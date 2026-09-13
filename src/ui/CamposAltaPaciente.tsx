@@ -107,6 +107,8 @@ export default function CamposAltaPaciente({
         />
       </SimpleGrid>
 
+      <Seccion>Contacto</Seccion>
+
       <SimpleGrid cols={2}>
         <TextInput
           label="Email"
@@ -192,6 +194,7 @@ export default function CamposAltaPaciente({
 
       {pide(perfil, 'direccion') && (
         <Stack gap="sm">
+          <Seccion>Dirección</Seccion>
           <TextInput
             label="Dirección"
             disabled={disabled}
