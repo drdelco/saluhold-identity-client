@@ -8,9 +8,11 @@
 // permite a las functions de las cuatro apps —todas CommonJS— compartir estas
 // reglas en vez de tener cada una su copia.
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.acunarNumeroHistoria = exports.clinicasDelGrupo = exports.vincularPacienteEnIdentity = void 0;
+exports.liberarNifEnIdentity = exports.acunarNumeroHistoria = exports.clinicasDelGrupo = exports.vincularPacienteEnIdentity = void 0;
 var vinculacion_1 = require("./vinculacion");
 Object.defineProperty(exports, "vincularPacienteEnIdentity", { enumerable: true, get: function () { return vinculacion_1.vincularPacienteEnIdentity; } });
 Object.defineProperty(exports, "clinicasDelGrupo", { enumerable: true, get: function () { return vinculacion_1.clinicasDelGrupo; } });
 Object.defineProperty(exports, "acunarNumeroHistoria", { enumerable: true, get: function () { return vinculacion_1.acunarNumeroHistoria; } });
+var liberarNif_1 = require("./liberarNif");
+Object.defineProperty(exports, "liberarNifEnIdentity", { enumerable: true, get: function () { return liberarNif_1.liberarNifEnIdentity; } });
 //# sourceMappingURL=index.js.map

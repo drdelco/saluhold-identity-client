@@ -16,3 +16,9 @@ export {
   type ResultadoVinculacion,
   type OpcionesVinculacion,
 } from './vinculacion';
+
+export {
+  liberarNifEnIdentity,
+  type DatosLiberacion,
+  type ResultadoLiberacion,
+} from './liberarNif';

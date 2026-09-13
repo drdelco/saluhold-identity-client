@@ -7,4 +7,5 @@
 // permite a las functions de las cuatro apps —todas CommonJS— compartir estas
 // reglas en vez de tener cada una su copia.
 export { vincularPacienteEnIdentity, clinicasDelGrupo, acunarNumeroHistoria, } from './vinculacion';
+export { liberarNifEnIdentity, } from './liberarNif';
 //# sourceMappingURL=index.js.map
