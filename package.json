@@ -21,6 +21,12 @@
       "require": "./dist-cjs/servidor/index.js"
     }
   },
+  "typesVersions": {
+    "*": {
+      "ui": ["dist/ui/index.d.ts"],
+      "servidor": ["dist/servidor/index.d.ts"]
+    }
+  },
   "scripts": {
     "build": "tsc && tsc -p tsconfig.cjs.json && node scripts/marcar-modulos.cjs",
     "watch": "tsc --watch",
