@@ -9,7 +9,7 @@
 // `PERFILES_ALTA` en `altaPaciente.ts`.
 
 import type { ReactNode } from 'react';
-import { Stack, Group, Box, Text, TextInput, NativeSelect, SimpleGrid } from '@mantine/core';
+import { Stack, Group, Box, Text, TextInput, NativeSelect, Select, SimpleGrid } from '@mantine/core';
 import { OPCIONES_SEXO } from '../sexo';
 import { validarIdentificador } from '../identificador';
 import {
@@ -37,15 +37,26 @@ export interface CamposAltaPacienteProps {
   idiomas?: Array<{ value: string; label: string }>;
   /** Selector de prefijo telefónico de la app. */
   prefijoSlot?: ReactNode;
+  /**
+   * Rótulos que separan identidad, contacto y dirección. Puestos por defecto
+   * porque el formulario es largo y sin ellos es un muro de campos; se pueden
+   * quitar en pantallas estrechas, donde ocupan más de lo que orientan.
+   */
+  secciones?: boolean;
+  /** El cursor empieza en el nombre. Útil cuando el modal abre directo al alta. */
+  autoFocusNombre?: boolean;
 }
 
 const AVISO_REVISAR = 'El lector no lo leyó con seguridad: compruébalo.';
 
 export default function CamposAltaPaciente({
   perfil, valores, onChange, provisional = false, disabled = false,
-  revisar = [], paises, idiomas, prefijoSlot,
+  revisar = [], paises, idiomas, prefijoSlot, secciones = true, autoFocusNombre = false,
 }: CamposAltaPacienteProps) {
   const marca = (campo: string) => (revisar.includes(campo) ? AVISO_REVISAR : undefined);
+
+  const Seccion = ({ children }: { children: string }) =>
+    secciones ? <Text size="sm" fw={600} c="dimmed" tt="uppercase">{children}</Text> : null;
 
   // Solo se comprueba la letra de un DNI o un NIE; un pasaporte no la tiene, y
   // ahí `validarIdentificador` devuelve 'no-aplica'.
@@ -53,6 +64,8 @@ export default function CamposAltaPaciente({
 
   return (
     <Stack gap="md">
+      <Seccion>Identidad</Seccion>
+
       {!provisional && pide(perfil, 'nif') && (
         <TextInput
           label="Documento de identidad"
@@ -78,6 +91,7 @@ export default function CamposAltaPaciente({
         <TextInput
           label="Nombre"
           required
+          autoFocus={autoFocusNombre}
           disabled={disabled}
           value={valores.nombre}
           onChange={(e) => { const v = e.currentTarget.value; onChange({ nombre: v }); }}
@@ -158,13 +172,20 @@ export default function CamposAltaPaciente({
         </SimpleGrid>
       )}
 
+      {/* País y nacionalidad van en Select BUSCABLE y no en NativeSelect: son
+          dos listas de ~200 entradas y sin buscador hay que bajarlas a rueda.
+          Sexo e idioma sí son NativeSelect, que con tres opciones es más rápido. */}
       {pide(perfil, 'nacionalidad') && (
-        <NativeSelect
+        <Select
           label="Nacionalidad"
+          searchable
+          clearable
+          nothingFoundMessage="Sin coincidencias"
+          placeholder="Sin especificar"
           disabled={disabled}
-          value={valores.nacionalidad}
-          onChange={(e) => { const v = e.currentTarget.value; onChange({ nacionalidad: v }); }}
-          data={[{ value: '', label: 'Sin especificar' }, ...paises]}
+          value={valores.nacionalidad || null}
+          onChange={(v) => onChange({ nacionalidad: v || '' })}
+          data={paises}
           description={marca('nacionalidad')}
         />
       )}
@@ -200,11 +221,14 @@ export default function CamposAltaPaciente({
               onChange={(e) => { const v = e.currentTarget.value; onChange({ provincia: v }); }}
               description={marca('provincia')}
             />
-            <NativeSelect
+            <Select
               label="País"
+              searchable
+              allowDeselect={false}
+              nothingFoundMessage="Sin coincidencias"
               disabled={disabled}
-              value={valores.pais}
-              onChange={(e) => { const v = e.currentTarget.value; onChange({ pais: v }); }}
+              value={valores.pais || null}
+              onChange={(v) => onChange({ pais: v || '' })}
               data={paises}
             />
           </SimpleGrid>
