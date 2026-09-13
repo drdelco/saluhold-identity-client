@@ -1,0 +1,2 @@
+export { vincularPacienteEnIdentity, clinicasDelGrupo, acunarNumeroHistoria, type FirestoreMinimo, type ArrayUnion, type ResultadoVinculacion, type OpcionesVinculacion, } from './vinculacion';
+//# sourceMappingURL=index.d.ts.map

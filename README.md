@@ -52,6 +52,20 @@ npm run watch    # solo ESM, para iterar
 Tras un cambio, en cada app que lo consuma: `npm install` para traer el commit
 nuevo.
 
+### `dist/` y `dist-cjs/` van versionados
+
+No es lo habitual, y es a propósito. Al instalarse desde git, este paquete se
+compila con el script `prepare`, así que **depende de que quien lo instale
+ejecute scripts**. Un `npm ci --ignore-scripts` —bandera que muchos entornos de
+integración añaden por seguridad— lo instalaría con código de salida 0 y sin
+`dist-cjs`, y las Cloud Functions reventarían en ejecución sin que nadie hubiera
+visto un error. Teniendo las compilaciones en el repositorio, ese caso funciona.
+
+**Consecuencia: `npm run build` antes de cada commit que toque `src/`.** Quien
+instale con scripts permitidos recompila igual y no llega a leer lo versionado,
+así que un `dist/` desactualizado no rompe a nadie — pero deja el repositorio
+mintiendo.
+
 ## Sobre este repositorio
 
 Es público porque su código ya viajaba a los navegadores dentro de los bundles
