@@ -1,0 +1,222 @@
+// altaPaciente.ts — el formulario de alta, una sola vez para toda la suite.
+//
+// El PROCEDIMIENTO del alta ya estaba unificado: buscar primero en Identity y
+// crear después por `crearPacienteCanonico` / `crearPacienteProvisionalCanonico`,
+// que es quien acuña el número de historia, normaliza la dirección española y
+// comprueba duplicados en todo el ecosistema.
+//
+// Lo que seguía divergiendo era lo de más abajo: QUÉ campos pide cada app y CÓMO
+// los traduce al payload. Había cuatro copias del mismo formulario, y de esa
+// clase de divergencia salieron ya dos averías reales: SaluFact borrando la
+// fecha de nacimiento en cada edición porque mandaba `null` por un campo que su
+// formulario no cargaba, y SaluFirst escribiendo 'M' de masculino donde Identity
+// entiende MUJER.
+//
+// Aquí están el estado del formulario, el perfil de cada app y la traducción al
+// payload. La PANTALLA se queda en cada app a propósito: los pasos alrededor del
+// formulario sí son distintos de verdad (SaluFile firma vinculaciones
+// presenciales, SaluFirst asigna médico e idioma, el portal elige clínica), y
+// meterlos todos en un componente con huecos sería peor que tener tres modales.
+
+import type { DatosDocumento } from './documento';
+
+/** Las apps que dan altas. 'saluHold' es el portal de administración. */
+export type AppAlta = 'saluFile' | 'saluFirst' | 'saluFact' | 'saluHold';
+
+export type CampoAlta =
+  | 'nif'
+  | 'nombre'
+  | 'apellidos'
+  | 'sexo'
+  | 'fechaNacimiento'
+  | 'nacionalidad'
+  | 'telefono'
+  | 'email'
+  | 'direccion'
+  | 'idiomaInforme';
+
+export interface FormularioAlta {
+  nif: string;
+  nombre: string;
+  apellidos: string;
+  /** Contrato de Identity: 'H' | 'M' | 'O'. Nunca el literal de un documento. */
+  sexo: string;
+  /** ISO 'YYYY-MM-DD'. */
+  fechaNacimiento: string;
+  nacionalidad: string;
+  prefijoTelefono: string;
+  telefono: string;
+  email: string;
+  calle: string;
+  codigoPostal: string;
+  poblacion: string;
+  provincia: string;
+  pais: string;
+  /** Solo SaluFirst: idioma en que se le manda el informe. */
+  idiomaInforme: string;
+}
+
+export const FORM_ALTA_VACIO: FormularioAlta = {
+  nif: '', nombre: '', apellidos: '', sexo: '', fechaNacimiento: '',
+  nacionalidad: '', prefijoTelefono: '+34', telefono: '', email: '',
+  calle: '', codigoPostal: '', poblacion: '', provincia: '', pais: 'España',
+  idiomaInforme: 'es',
+};
+
+export interface PerfilAlta {
+  /** Qué se pide, en este orden. Lo que no está aquí no se enseña ni se manda. */
+  campos: CampoAlta[];
+  /**
+   * Qué no puede ir vacío en un alta CON documento. Nombre y apellidos lo son
+   * siempre, en todas las apps, y no hace falta repetirlos.
+   */
+  obligatorios: CampoAlta[];
+}
+
+/**
+ * Qué pide cada app.
+ *
+ * SaluFact no pide sexo ni fecha de nacimiento y no es un olvido: para emitir
+ * una factura no hacen falta, y pedir un dato de salud o una edad que no se va
+ * a usar es recoger datos personales sin motivo. Está aquí como dato y no como
+ * comentario en un JSX para que no vuelva a colarse al copiar un formulario.
+ *
+ * El idioma del informe solo lo pide SaluFirst: es suyo, no de Identity, y
+ * acaba en la ficha local del centro.
+ */
+export const PERFILES_ALTA: Record<AppAlta, PerfilAlta> = {
+  saluFile: {
+    campos: ['nif', 'nombre', 'apellidos', 'sexo', 'fechaNacimiento', 'nacionalidad', 'telefono', 'email', 'direccion'],
+    obligatorios: ['nif'],
+  },
+  saluFirst: {
+    campos: ['nif', 'nombre', 'apellidos', 'sexo', 'fechaNacimiento', 'nacionalidad', 'telefono', 'email', 'direccion', 'idiomaInforme'],
+    obligatorios: ['nif'],
+  },
+  saluFact: {
+    campos: ['nif', 'nombre', 'apellidos', 'nacionalidad', 'telefono', 'email', 'direccion'],
+    obligatorios: ['nif', 'direccion'],
+  },
+  saluHold: {
+    campos: ['nif', 'nombre', 'apellidos', 'sexo', 'fechaNacimiento', 'nacionalidad', 'telefono', 'email', 'direccion'],
+    obligatorios: ['nif'],
+  },
+};
+
+export function pide(perfil: PerfilAlta, campo: CampoAlta): boolean {
+  return perfil.campos.includes(campo);
+}
+
+/**
+ * Lo que el lector del documento dejó en el formulario.
+ *
+ * El sexo llega YA en el contrato de Identity porque lo traduce el lector, así
+ * que se copia tal cual y NO se marca `sexoDesdeDocumento`: marcarlo lo
+ * invertiría, porque en un documento la "M" es masculino y en Identity es mujer.
+ */
+export function aplicarLecturaAlAlta(actual: FormularioAlta, leido: DatosDocumento): FormularioAlta {
+  const dir = leido.direccion;
+  return {
+    ...actual,
+    nif: leido.nif ?? actual.nif,
+    nombre: leido.nombre ?? actual.nombre,
+    apellidos: leido.apellidos ?? actual.apellidos,
+    sexo: leido.sexo ?? actual.sexo,
+    fechaNacimiento: leido.fechaNacimiento ?? actual.fechaNacimiento,
+    nacionalidad: leido.nacionalidad ?? actual.nacionalidad,
+    calle: dir?.calle ?? actual.calle,
+    codigoPostal: dir?.codigoPostal ?? actual.codigoPostal,
+    poblacion: dir?.poblacion ?? actual.poblacion,
+    provincia: dir?.provincia ?? actual.provincia,
+    pais: dir?.pais ?? actual.pais,
+  };
+}
+
+export interface OpcionesAlta {
+  /** En qué clínica se da de alta. Lo exige la callable canónica. */
+  clinicaId?: string;
+  /** Ficha sin documento: se le acuña un PEND-N. */
+  provisional?: boolean;
+}
+
+/**
+ * Qué falta para poder guardar. Devuelve el aviso, o null si está listo.
+ *
+ * Sin documento el criterio cambia: lo único que permite volver a encontrar a
+ * esa persona es el nombre y una forma de contacto, así que se exige una de las
+ * dos. El servidor lo vuelve a comprobar; esto es para no hacer ir y volver.
+ */
+export function validarAlta(
+  form: FormularioAlta,
+  perfil: PerfilAlta,
+  opciones: OpcionesAlta = {},
+): string | null {
+  if (!form.nombre.trim() || !form.apellidos.trim()) {
+    return 'El nombre y los apellidos son obligatorios.';
+  }
+
+  if (opciones.provisional) {
+    if (!form.email.trim() && !form.telefono.trim()) {
+      return 'Sin documento hace falta al menos un email o un teléfono para poder completar la ficha más adelante.';
+    }
+    return null;
+  }
+
+  for (const campo of perfil.obligatorios) {
+    if (campo === 'nif' && !form.nif.trim()) {
+      return 'El documento de identidad es obligatorio.';
+    }
+    if (campo === 'direccion' && !form.calle.trim()) {
+      return 'La dirección es obligatoria.';
+    }
+    if (campo === 'email' && !form.email.trim()) return 'El email es obligatorio.';
+    if (campo === 'telefono' && !form.telefono.trim()) return 'El teléfono es obligatorio.';
+  }
+  return null;
+}
+
+/**
+ * El payload de la callable canónica.
+ *
+ * Un campo que el perfil no pide NO viaja, ni siquiera como null. Es la
+ * diferencia entre "esta app no gestiona este dato" y "este dato está vacío":
+ * mandar null por lo segundo es lo que borró la fecha de nacimiento de los
+ * pacientes en cada edición hecha desde SaluFact.
+ *
+ * `app` no se manda desde aquí: lo pone quien llama, porque es lo que decide el
+ * prefijo del número de historia (SC-, SF-, FA-, o ID- si el alta se hizo en el
+ * portal).
+ */
+export function construirDatosAlta(
+  form: FormularioAlta,
+  perfil: PerfilAlta,
+  opciones: OpcionesAlta = {},
+): Record<string, unknown> {
+  const dato = (campo: CampoAlta, valor: string) =>
+    pide(perfil, campo) && valor.trim() ? { [campo]: valor.trim() } : {};
+
+  return {
+    ...(opciones.clinicaId ? { clinicaId: opciones.clinicaId } : {}),
+    nombre: form.nombre.trim(),
+    apellidos: form.apellidos.trim(),
+    // Sin documento no se manda NIF: lo acuña el servidor como PEND-N.
+    ...(opciones.provisional ? {} : dato('nif', form.nif.toUpperCase())),
+    ...dato('sexo', form.sexo),
+    ...dato('fechaNacimiento', form.fechaNacimiento),
+    ...dato('nacionalidad', form.nacionalidad),
+    ...dato('telefono', form.telefono),
+    ...(pide(perfil, 'telefono') ? { prefijoTelefono: form.prefijoTelefono || '+34' } : {}),
+    ...dato('email', form.email),
+    ...(pide(perfil, 'direccion')
+      ? {
+        direccion: {
+          calle: form.calle.trim(),
+          codigoPostal: form.codigoPostal.trim(),
+          poblacion: form.poblacion.trim(),
+          provincia: form.provincia.trim(),
+          pais: form.pais.trim() || 'España',
+        },
+      }
+      : {}),
+  };
+}

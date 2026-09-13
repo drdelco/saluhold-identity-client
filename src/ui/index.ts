@@ -61,6 +61,22 @@ export {
   type EstadoSesion,
 } from './sesionEscaneo';
 
+export {
+  FORM_ALTA_VACIO,
+  PERFILES_ALTA,
+  pide,
+  aplicarLecturaAlAlta,
+  validarAlta,
+  construirDatosAlta,
+  type AppAlta,
+  type CampoAlta,
+  type FormularioAlta,
+  type PerfilAlta,
+  type OpcionesAlta,
+} from './altaPaciente';
+
+export { default as CamposAltaPaciente, type CamposAltaPacienteProps } from './CamposAltaPaciente';
+
 export { default as ScanIdButton } from './ScanIdButton';
 export { default as DocumentFacesPicker, type OrigenFoto } from './DocumentFacesPicker';
 export { default as WebcamCaptureModal } from './WebcamCaptureModal';
