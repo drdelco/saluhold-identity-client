@@ -93,9 +93,14 @@ export const PERFILES_ALTA: Record<AppAlta, PerfilAlta> = {
     campos: ['nif', 'nombre', 'apellidos', 'sexo', 'fechaNacimiento', 'nacionalidad', 'telefono', 'email', 'direccion', 'idiomaInforme'],
     obligatorios: ['nif'],
   },
+  // La dirección NO es obligatoria en el alta aunque una factura la exija: la
+  // exige `emitir-factura`, y allí la regla tiene un matiz que un formulario no
+  // puede tener — a un cliente extranjero con pasaporte no se le pide domicilio
+  // español, porque VERI*FACTU admite destinatarios extranjeros sin él. Bloquear
+  // el alta aquí impediría dar de alta a esos clientes.
   saluFact: {
     campos: ['nif', 'nombre', 'apellidos', 'nacionalidad', 'telefono', 'email', 'direccion'],
-    obligatorios: ['nif', 'direccion'],
+    obligatorios: ['nif'],
   },
   saluHold: {
     campos: ['nif', 'nombre', 'apellidos', 'sexo', 'fechaNacimiento', 'nacionalidad', 'telefono', 'email', 'direccion'],
