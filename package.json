@@ -1,10 +1,20 @@
 {
   "name": "@saluhold/identity-client",
-  "version": "0.1.0",
-  "description": "Cliente JS compartido para el Local Server SaluHold (lectura de pacientes/empresas en Identity con caché local). Fuente única de verdad para SaluFile, SaluFact y SaluFirst.",
+  "version": "0.2.0",
+  "description": "Cliente JS compartido para el Local Server SaluHold (lectura de pacientes/empresas en Identity con caché local) y componentes de UI comunes a SaluFile, SaluFact y SaluFirst. Fuente única de verdad.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "private": true,
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    },
+    "./ui": {
+      "types": "./dist/ui/index.d.ts",
+      "default": "./dist/ui/index.js"
+    }
+  },
   "scripts": {
     "build": "tsc",
     "watch": "tsc --watch",
@@ -14,7 +24,29 @@
     "dist",
     "src"
   ],
+  "peerDependencies": {
+    "@mantine/core": "^8.0.0",
+    "firebase": ">=10",
+    "lucide-react": ">=0.3",
+    "qrcode": "^1.5.0",
+    "react": "^18.0.0 || ^19.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@mantine/core": { "optional": true },
+    "firebase": { "optional": true },
+    "lucide-react": { "optional": true },
+    "qrcode": { "optional": true },
+    "react": { "optional": true }
+  },
   "devDependencies": {
+    "@mantine/core": "^8.3.14",
+    "@types/qrcode": "^1.5.5",
+    "@types/react": "^18.3.12",
+    "firebase": "^12.7.0",
+    "lucide-react": "^0.454.0",
+    "qrcode": "^1.5.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
     "typescript": "5.4"
   }
 }
