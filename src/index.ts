@@ -258,6 +258,42 @@ async function checkAvailability(): Promise<boolean> {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
+// TOKEN DEL ACELERADOR
+// ═══════════════════════════════════════════════════════════════════════════
+
+/**
+ * Secreto compartido con el acelerador de la clínica.
+ *
+ * El acelerador guarda una copia de los pacientes y de la historia clínica, y
+ * escucha en la red local. Sin este token, cualquiera que llegue a ese puerto
+ * —un portátil invitado en el wifi de la consulta, o el JavaScript de
+ * cualquier web abierta en el ordenador— podía pedirle datos de salud y
+ * obtenerlos. Ahora el servidor rechaza lo que no lo traiga.
+ *
+ * Vive en el documento de la clínica, no en un fichero de configuración del
+ * PC: así se puede rotar desde la nube sin entrar en la consulta, y el
+ * acelerador lo recoge al vuelo porque ya escucha ese documento.
+ */
+let _acceleratorToken: string | null = null;
+
+/** Lo llama cada app al cargar la configuración de su clínica. */
+export function setAcceleratorToken(token: string | null | undefined): void {
+  _acceleratorToken = (token || '').trim() || null;
+}
+
+export function getAcceleratorToken(): string | null {
+  return _acceleratorToken;
+}
+
+/** Cabeceras de una petición al acelerador, con el token si lo hay. */
+function cabeceras(extra?: Record<string, string>): Record<string, string> {
+  return {
+    ...(extra || {}),
+    ...(_acceleratorToken ? { 'X-Accelerator-Token': _acceleratorToken } : {}),
+  };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
 // LOW-LEVEL HTTP HELPERS
 // ═══════════════════════════════════════════════════════════════════════════
 
@@ -269,7 +305,7 @@ export async function localPost<T>(path: string, body: Record<string, unknown>):
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
     const resp = await fetch(`${_localServerUrl}${path}`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: cabeceras({ 'Content-Type': 'application/json' }),
       body: JSON.stringify(body),
       signal: controller.signal,
     });
@@ -288,7 +324,10 @@ export async function localGet<T>(path: string): Promise<T | null> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
-    const resp = await fetch(`${_localServerUrl}${path}`, { signal: controller.signal });
+    const resp = await fetch(`${_localServerUrl}${path}`, {
+      headers: cabeceras(),
+      signal: controller.signal,
+    });
     clearTimeout(timeout);
     if (!resp.ok) return null;
     return await resp.json() as T;
