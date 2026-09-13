@@ -15,14 +15,16 @@ import type { Functions } from 'firebase/functions';
 import type { Firestore } from 'firebase/firestore';
 import type { Auth } from 'firebase/auth';
 
-/** Lo mínimo que el escáner necesita saber de un paciente encontrado. */
-export interface PacienteCoincidente {
-  id: string;
-  nombre?: string;
-  apellidos?: string;
-  nif?: string;
-  [k: string]: unknown;
-}
+/**
+ * Un paciente que ya existe con ese documento.
+ *
+ * El tipo es deliberadamente abierto: el escáner no interpreta la ficha, la
+ * recibe de la búsqueda de la app y la devuelve tal cual a la pantalla de alta,
+ * que sí conoce su propio tipo. Cerrarlo aquí obligaría a las tres apps a
+ * convertir en los dos sentidos para nada.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export type PacienteCoincidente = Record<string, any>;
 
 export interface ResultadoBusquedaNif {
   conAcceso: PacienteCoincidente[];
