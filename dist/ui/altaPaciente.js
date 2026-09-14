@@ -31,12 +31,15 @@ export const FORM_ALTA_VACIO = {
  * a usar es recoger datos personales sin motivo. Está aquí como dato y no como
  * comentario en un JSX para que no vuelva a colarse al copiar un formulario.
  *
- * El idioma del informe solo lo pide SaluFirst: es suyo, no de Identity, y
- * acaba en la ficha local del centro.
+ * El idioma lo piden las cuatro desde 2026-09-14. Antes solo SaluFirst, y como
+ * se guardaba en la ficha local del centro, el mismo paciente podía ser 'en' en
+ * una app y 'es' en otra: a quien estaba marcado en inglés la teleconsulta le
+ * llegaba en español. Ahora es dato maestro de la persona en Identity
+ * (`idiomaInformes`), igual que el del profesional.
  */
 export const PERFILES_ALTA = {
     saluFile: {
-        campos: ['nif', 'nombre', 'apellidos', 'sexo', 'fechaNacimiento', 'nacionalidad', 'telefono', 'email', 'direccion'],
+        campos: ['nif', 'nombre', 'apellidos', 'sexo', 'fechaNacimiento', 'nacionalidad', 'telefono', 'email', 'direccion', 'idiomaInforme'],
         obligatorios: ['nif'],
     },
     saluFirst: {
@@ -49,11 +52,11 @@ export const PERFILES_ALTA = {
     // español, porque VERI*FACTU admite destinatarios extranjeros sin él. Bloquear
     // el alta aquí impediría dar de alta a esos clientes.
     saluFact: {
-        campos: ['nif', 'nombre', 'apellidos', 'nacionalidad', 'telefono', 'email', 'direccion'],
+        campos: ['nif', 'nombre', 'apellidos', 'nacionalidad', 'telefono', 'email', 'direccion', 'idiomaInforme'],
         obligatorios: ['nif'],
     },
     saluHold: {
-        campos: ['nif', 'nombre', 'apellidos', 'sexo', 'fechaNacimiento', 'nacionalidad', 'telefono', 'email', 'direccion'],
+        campos: ['nif', 'nombre', 'apellidos', 'sexo', 'fechaNacimiento', 'nacionalidad', 'telefono', 'email', 'direccion', 'idiomaInforme'],
         obligatorios: ['nif'],
     },
 };
@@ -138,6 +141,12 @@ export function construirDatosAlta(form, perfil, opciones = {}) {
         ...dato('sexo', form.sexo),
         ...dato('fechaNacimiento', form.fechaNacimiento),
         ...dato('nacionalidad', form.nacionalidad),
+        // El formulario lo llama `idiomaInforme` y el dato maestro de Identity
+        // `idiomaInformes`. Se traduce aqui, que es la frontera, en vez de
+        // renombrar el campo del formulario: lo usan cuatro apps y la APK.
+        ...(pide(perfil, 'idiomaInforme') && form.idiomaInforme.trim()
+            ? { idiomaInformes: form.idiomaInforme.trim() }
+            : {}),
         ...dato('telefono', form.telefono),
         ...(pide(perfil, 'telefono') ? { prefijoTelefono: form.prefijoTelefono || '+34' } : {}),
         ...dato('email', form.email),

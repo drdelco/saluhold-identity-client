@@ -52,7 +52,13 @@ export interface FormularioAlta {
   poblacion: string;
   provincia: string;
   pais: string;
-  /** Solo SaluFirst: idioma en que se le manda el informe. */
+  /**
+   * Lengua en la que se le escribe: emails, informes y formularios.
+   *
+   * Se llama en singular porque es el campo del FORMULARIO; en Identity el dato
+   * maestro es `idiomaInformes`, y la traducción la hace `construirDatosAlta`,
+   * que es justo la frontera entre el formulario y el servidor.
+   */
   idiomaInforme: string;
 }
 
@@ -81,12 +87,15 @@ export interface PerfilAlta {
  * a usar es recoger datos personales sin motivo. Está aquí como dato y no como
  * comentario en un JSX para que no vuelva a colarse al copiar un formulario.
  *
- * El idioma del informe solo lo pide SaluFirst: es suyo, no de Identity, y
- * acaba en la ficha local del centro.
+ * El idioma lo piden las cuatro desde 2026-09-14. Antes solo SaluFirst, y como
+ * se guardaba en la ficha local del centro, el mismo paciente podía ser 'en' en
+ * una app y 'es' en otra: a quien estaba marcado en inglés la teleconsulta le
+ * llegaba en español. Ahora es dato maestro de la persona en Identity
+ * (`idiomaInformes`), igual que el del profesional.
  */
 export const PERFILES_ALTA: Record<AppAlta, PerfilAlta> = {
   saluFile: {
-    campos: ['nif', 'nombre', 'apellidos', 'sexo', 'fechaNacimiento', 'nacionalidad', 'telefono', 'email', 'direccion'],
+    campos: ['nif', 'nombre', 'apellidos', 'sexo', 'fechaNacimiento', 'nacionalidad', 'telefono', 'email', 'direccion', 'idiomaInforme'],
     obligatorios: ['nif'],
   },
   saluFirst: {
@@ -99,11 +108,11 @@ export const PERFILES_ALTA: Record<AppAlta, PerfilAlta> = {
   // español, porque VERI*FACTU admite destinatarios extranjeros sin él. Bloquear
   // el alta aquí impediría dar de alta a esos clientes.
   saluFact: {
-    campos: ['nif', 'nombre', 'apellidos', 'nacionalidad', 'telefono', 'email', 'direccion'],
+    campos: ['nif', 'nombre', 'apellidos', 'nacionalidad', 'telefono', 'email', 'direccion', 'idiomaInforme'],
     obligatorios: ['nif'],
   },
   saluHold: {
-    campos: ['nif', 'nombre', 'apellidos', 'sexo', 'fechaNacimiento', 'nacionalidad', 'telefono', 'email', 'direccion'],
+    campos: ['nif', 'nombre', 'apellidos', 'sexo', 'fechaNacimiento', 'nacionalidad', 'telefono', 'email', 'direccion', 'idiomaInforme'],
     obligatorios: ['nif'],
   },
 };
@@ -209,6 +218,12 @@ export function construirDatosAlta(
     ...dato('sexo', form.sexo),
     ...dato('fechaNacimiento', form.fechaNacimiento),
     ...dato('nacionalidad', form.nacionalidad),
+    // El formulario lo llama `idiomaInforme` y el dato maestro de Identity
+    // `idiomaInformes`. Se traduce aqui, que es la frontera, en vez de
+    // renombrar el campo del formulario: lo usan cuatro apps y la APK.
+    ...(pide(perfil, 'idiomaInforme') && form.idiomaInforme.trim()
+      ? { idiomaInformes: form.idiomaInforme.trim() }
+      : {}),
     ...dato('telefono', form.telefono),
     ...(pide(perfil, 'telefono') ? { prefijoTelefono: form.prefijoTelefono || '+34' } : {}),
     ...dato('email', form.email),
