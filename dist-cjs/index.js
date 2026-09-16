@@ -21,7 +21,7 @@
  * a Cloud Functions o mostrar un error.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.construirDatosAlta = exports.validarAlta = exports.aplicarLecturaAlAlta = exports.pide = exports.PERFILES_ALTA = exports.FORM_ALTA_VACIO = exports.comprimirParaIA = exports.sexoDesdeExterno = exports.esMujer = exports.esHombre = exports.comoSexoIdentity = exports.displayASexo = exports.sexoADisplay = exports.OPCIONES_SEXO = exports.identificadorAceptable = exports.validarIdentificador = exports.tipoDeIdentificador = exports.canonizarIdentificador = exports.normalizarIdentificador = exports.localGetClinicConfig = exports.localBuscarProfesionalPorUID = exports.localObtenerProfesional = exports.localBuscarProfesionales = exports.localListarProfesionales = exports.localListarPacientesRecientes = exports.localObtenerPaciente = exports.localBuscarPacientes = exports.localObtenerCliente = exports.localClientesRecientes = exports.localBuscarClientes = exports.mapEmpresaToCliente = exports.mapPacienteToCliente = exports.localGet = exports.localPost = exports.getAcceleratorToken = exports.setAcceleratorToken = exports.ensureLocalServerChecked = exports.resetLocalServerCheck = exports.getLocalServerStats = exports.isLocalServerAvailable = exports.getLocalServerUrl = exports.hayAceleradorConfigurado = exports.setLocalServerHostExternal = exports.setLocalServerHost = void 0;
+exports.TEXTOS_UI_ES = exports.textosUI = exports.configurarTextosUI = exports.construirDatosAlta = exports.validarAlta = exports.aplicarLecturaAlAlta = exports.pide = exports.PERFILES_ALTA = exports.FORM_ALTA_VACIO = exports.comprimirParaIA = exports.sexoDesdeExterno = exports.esMujer = exports.esHombre = exports.comoSexoIdentity = exports.displayASexo = exports.sexoADisplay = exports.OPCIONES_SEXO = exports.identificadorAceptable = exports.validarIdentificador = exports.tipoDeIdentificador = exports.canonizarIdentificador = exports.normalizarIdentificador = exports.localGetClinicConfig = exports.localBuscarProfesionalPorUID = exports.localObtenerProfesional = exports.localBuscarProfesionales = exports.localListarProfesionales = exports.localListarPacientesRecientes = exports.localObtenerPaciente = exports.localBuscarPacientes = exports.localObtenerCliente = exports.localClientesRecientes = exports.localBuscarClientes = exports.mapEmpresaToCliente = exports.mapPacienteToCliente = exports.localGet = exports.localPost = exports.getAcceleratorToken = exports.setAcceleratorToken = exports.ensureLocalServerChecked = exports.resetLocalServerCheck = exports.getLocalServerStats = exports.isLocalServerAvailable = exports.getLocalServerUrl = exports.hayAceleradorConfigurado = exports.setLocalServerHostExternal = exports.setLocalServerHost = void 0;
 // ═══════════════════════════════════════════════════════════════════════════
 // ESTADO Y CONFIGURACIÓN DE CONEXIÓN
 // ═══════════════════════════════════════════════════════════════════════════
@@ -561,4 +561,12 @@ Object.defineProperty(exports, "pide", { enumerable: true, get: function () { re
 Object.defineProperty(exports, "aplicarLecturaAlAlta", { enumerable: true, get: function () { return altaPaciente_1.aplicarLecturaAlAlta; } });
 Object.defineProperty(exports, "validarAlta", { enumerable: true, get: function () { return altaPaciente_1.validarAlta; } });
 Object.defineProperty(exports, "construirDatosAlta", { enumerable: true, get: function () { return altaPaciente_1.construirDatosAlta; } });
+// Los textos, también desde la raíz y por el mismo motivo: `validarAlta` y
+// `comprimirParaIA` devuelven mensajes al usuario, y quien los llama desde la
+// app nativa no puede importar `/ui` —es React Native, no hay Mantine—. Sin
+// esto, SaluFirst podría traducir la pantalla pero no lo que responde el SDK.
+var textos_1 = require("./ui/textos");
+Object.defineProperty(exports, "configurarTextosUI", { enumerable: true, get: function () { return textos_1.configurarTextosUI; } });
+Object.defineProperty(exports, "textosUI", { enumerable: true, get: function () { return textos_1.textosUI; } });
+Object.defineProperty(exports, "TEXTOS_UI_ES", { enumerable: true, get: function () { return textos_1.TEXTOS_UI_ES; } });
 //# sourceMappingURL=index.js.map

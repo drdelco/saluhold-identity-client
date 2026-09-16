@@ -13,6 +13,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Modal, Stack, Group, Button, Text, Paper, Image, ActionIcon, SimpleGrid } from '@mantine/core';
 import { Camera, Upload, ScanLine, X, CreditCard } from 'lucide-react';
+import { textosUI, interpolar } from './textos';
 
 export type OrigenFoto = 'camara' | 'archivo';
 
@@ -35,6 +36,7 @@ function Hueco({
   onElegir: () => void;
   onQuitar: () => void;
 }) {
+  const t = textosUI();
   return (
     <Paper
       p="sm"
@@ -48,8 +50,8 @@ function Hueco({
           <>
             <Image src={foto.url} alt={titulo} h={96} w="auto" fit="contain" radius="sm" />
             <Group gap={4}>
-              <Button size="compact-xs" variant="subtle" color="gray" onClick={onElegir}>Cambiar</Button>
-              <ActionIcon size="sm" variant="subtle" color="gray" onClick={onQuitar} aria-label={`Quitar ${titulo}`}>
+              <Button size="compact-xs" variant="subtle" color="gray" onClick={onElegir}>{t.cambiar}</Button>
+              <ActionIcon size="sm" variant="subtle" color="gray" onClick={onQuitar} aria-label={interpolar(t.quitarCara, { cara: titulo })}>
                 <X size={14} />
               </ActionIcon>
             </Group>
@@ -64,7 +66,7 @@ function Hueco({
               leftSection={origen === 'camara' ? <Camera size={14} /> : <Upload size={14} />}
               onClick={onElegir}
             >
-              {origen === 'camara' ? 'Hacer foto' : 'Elegir foto'}
+              {origen === 'camara' ? t.hacerFoto : t.elegirFoto}
             </Button>
             <Text size="xs" c="dimmed" ta="center">{ayuda}</Text>
           </>
@@ -75,6 +77,7 @@ function Hueco({
 }
 
 export default function DocumentFacesPicker({ opened, onClose, onListo, origen }: Props) {
+  const t = textosUI();
   const [anverso, setAnverso] = useState<Foto | null>(null);
   const [reverso, setReverso] = useState<Foto | null>(null);
   const anversoRef = useRef<HTMLInputElement>(null);
@@ -117,7 +120,7 @@ export default function DocumentFacesPicker({ opened, onClose, onListo, origen }
     <Modal
       opened={opened}
       onClose={onClose}
-      title={origen === 'camara' ? 'Fotografiar el documento' : 'Subir fotos del documento'}
+      title={origen === 'camara' ? t.fotografiarDocumento : t.subirFotosDocumento}
       size="md"
       centered
       zIndex={400}
@@ -125,16 +128,16 @@ export default function DocumentFacesPicker({ opened, onClose, onListo, origen }
       <Stack gap="sm">
         <SimpleGrid cols={2} spacing="sm">
           <Hueco
-            titulo="Anverso"
-            ayuda="La cara con la foto y el número."
+            titulo={t.anverso}
+            ayuda={t.ayudaAnverso}
             foto={anverso}
             origen={origen}
             onElegir={() => anversoRef.current?.click()}
             onQuitar={quitar(setAnverso)}
           />
           <Hueco
-            titulo="Reverso"
-            ayuda="Opcional. Solo hace falta para el domicilio."
+            titulo={t.reverso}
+            ayuda={t.ayudaReverso}
             foto={reverso}
             origen={origen}
             onElegir={() => reversoRef.current?.click()}
@@ -142,14 +145,12 @@ export default function DocumentFacesPicker({ opened, onClose, onListo, origen }
           />
         </SimpleGrid>
 
-        <Text size="xs" c="dimmed">
-          La foto no se guarda: se procesa y se descarta.
-        </Text>
+        <Text size="xs" c="dimmed">{t.avisoFotoNoSeGuarda}</Text>
 
         <Group justify="flex-end">
-          <Button variant="subtle" color="gray" onClick={onClose}>Cancelar</Button>
+          <Button variant="subtle" color="gray" onClick={onClose}>{t.cancelar}</Button>
           <Button color="serene" leftSection={<ScanLine size={16} />} onClick={leer} disabled={!anverso}>
-            Leer documento
+            {t.leerDocumento}
           </Button>
         </Group>
 

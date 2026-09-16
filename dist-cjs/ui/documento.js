@@ -7,12 +7,19 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.leerDocumentoIdentidad = exports.MENSAJE_FALLO = void 0;
 const functions_1 = require("firebase/functions");
 const config_1 = require("./config");
-/** Mensajes para el usuario. Ninguno culpa al usuario ni menciona la IA. */
+const textos_1 = require("./textos");
+/**
+ * Mensajes para el usuario. Ninguno culpa al usuario ni menciona la IA.
+ *
+ * Son propiedades calculadas y no cadenas fijas para que el idioma se resuelva
+ * al LEER el mensaje y no al importar el módulo: si no, quedaría congelado el
+ * idioma que hubiera al arrancar la app.
+ */
 exports.MENSAJE_FALLO = {
-    ilegible: 'No se lee bien el documento. Acerca la cámara, evita reflejos y vuelve a intentarlo.',
-    no_es_documento: 'La imagen no parece un documento de identidad.',
-    respuesta_incompleta: 'No se ha podido completar la lectura. Inténtalo de nuevo.',
-    bloqueado_por_seguridad: 'No se ha podido procesar esta imagen. Prueba con otra foto.',
+    get ilegible() { return (0, textos_1.textosUI)().lecturaIlegible; },
+    get no_es_documento() { return (0, textos_1.textosUI)().lecturaNoEsDocumento; },
+    get respuesta_incompleta() { return (0, textos_1.textosUI)().lecturaIncompleta; },
+    get bloqueado_por_seguridad() { return (0, textos_1.textosUI)().lecturaBloqueada; },
 };
 /**
  * Lee un documento de identidad y devuelve los campos para prerrellenar.

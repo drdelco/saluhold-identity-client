@@ -12,13 +12,16 @@ import { useEffect, useRef, useState } from 'react';
 import { Modal, Stack, Group, Button, Text, Select, Alert, Box, Image, Loader } from '@mantine/core';
 import { Camera, AlertTriangle, RotateCcw, ScanLine } from 'lucide-react';
 import { mensajeDeError } from './config';
-const MENSAJE_CAMARA = {
-    NotAllowedError: 'Permiso de cámara denegado. Actívalo en el navegador para este sitio.',
-    NotFoundError: 'No se ha encontrado ninguna cámara en este equipo.',
-    NotReadableError: 'La cámara está en uso por otra aplicación.',
-    OverconstrainedError: 'La cámara seleccionada no está disponible.',
+import { textosUI, interpolar } from './textos';
+/** Qué clave rotula cada fallo de `getUserMedia`. El texto se busca al fallar. */
+const CLAVE_CAMARA = {
+    NotAllowedError: 'camaraPermisoDenegado',
+    NotFoundError: 'camaraNoEncontrada',
+    NotReadableError: 'camaraEnUso',
+    OverconstrainedError: 'camaraNoDisponible',
 };
 export default function WebcamCaptureModal({ opened, onClose, onCapturado }) {
+    const t = textosUI();
     const videoRef = useRef(null);
     const streamRef = useRef(null);
     const [dispositivos, setDispositivos] = useState([]);
@@ -56,7 +59,8 @@ export default function WebcamCaptureModal({ opened, onClose, onCapturado }) {
                 setDispositivoId(activo);
         }
         catch (e) {
-            setErrorCamara(MENSAJE_CAMARA[e?.name] || mensajeDeError(e, 'No se ha podido abrir la cámara.'));
+            const clave = CLAVE_CAMARA[e?.name];
+            setErrorCamara(clave ? t[clave] : mensajeDeError(e, t.errorAbrirCamara));
         }
         finally {
             setIniciando(false);
@@ -66,7 +70,7 @@ export default function WebcamCaptureModal({ opened, onClose, onCapturado }) {
         if (!opened)
             return;
         if (!navigator.mediaDevices?.getUserMedia) {
-            setErrorCamara('Este navegador no permite usar la cámara.');
+            setErrorCamara(t.camaraNoSoportada);
             return;
         }
         void arrancar(null);
@@ -106,9 +110,12 @@ export default function WebcamCaptureModal({ opened, onClose, onCapturado }) {
         onClose();
     };
     const puedeCapturar = !errorCamara && !iniciando && capturas.length < 2;
-    return (_jsx(Modal, { opened: opened, onClose: onClose, title: "C\u00E1mara de este equipo", size: "lg", centered: true, zIndex: 400, children: _jsxs(Stack, { gap: "sm", children: [_jsx(Text, { size: "sm", c: "dimmed", children: "Coloca el documento plano, bien iluminado y ocupando la imagen. Primero el anverso; el reverso solo hace falta para el domicilio. La foto no se guarda: se procesa y se descarta." }), dispositivos.length > 1 && (_jsx(Select, { size: "xs", label: "C\u00E1mara", value: dispositivoId, data: dispositivos.map((d, i) => ({ value: d.deviceId, label: d.label || `Cámara ${i + 1}` })), onChange: (v) => { if (v) {
+    return (_jsx(Modal, { opened: opened, onClose: onClose, title: t.camaraEquipo, size: "lg", centered: true, zIndex: 400, children: _jsxs(Stack, { gap: "sm", children: [_jsx(Text, { size: "sm", c: "dimmed", children: t.instruccionesWebcam }), dispositivos.length > 1 && (_jsx(Select, { size: "xs", label: t.camara, value: dispositivoId, data: dispositivos.map((d, i) => ({
+                        value: d.deviceId,
+                        label: d.label || interpolar(t.camaraNumerada, { n: i + 1 }),
+                    })), onChange: (v) => { if (v) {
                         setDispositivoId(v);
                         void arrancar(v);
-                    } }, allowDeselect: false })), errorCamara ? (_jsx(Alert, { color: "salu-yellow", variant: "light", icon: _jsx(AlertTriangle, { size: 16 }), children: _jsxs(Group, { justify: "space-between", wrap: "nowrap", children: [_jsx(Text, { size: "sm", children: errorCamara }), _jsx(Button, { size: "compact-xs", variant: "subtle", leftSection: _jsx(RotateCcw, { size: 12 }), onClick: () => void arrancar(dispositivoId), children: "Reintentar" })] }) })) : (_jsxs(Box, { pos: "relative", bg: "dark.8", style: { borderRadius: 8, overflow: 'hidden', minHeight: 240 }, children: [_jsx("video", { ref: videoRef, autoPlay: true, playsInline: true, muted: true, style: { width: '100%', display: 'block', maxHeight: '55vh', objectFit: 'contain' } }), iniciando && (_jsx(Group, { pos: "absolute", inset: 0, justify: "center", align: "center", children: _jsx(Loader, { color: "white", size: "sm" }) }))] })), capturas.length > 0 && (_jsx(Group, { gap: "sm", children: capturas.map((c, i) => (_jsxs(Stack, { gap: 2, align: "center", children: [_jsx(Image, { src: c.url, alt: i === 0 ? 'Anverso' : 'Reverso', w: 120, radius: "sm" }), _jsx(Text, { size: "xs", c: "dimmed", children: i === 0 ? 'Anverso' : 'Reverso' })] }, c.url))) })), _jsxs(Group, { justify: "space-between", wrap: "wrap", children: [_jsxs(Group, { gap: "xs", children: [_jsx(Button, { variant: "light", color: "serene", leftSection: _jsx(Camera, { size: 16 }), onClick: () => void capturar(), disabled: !puedeCapturar, children: capturas.length === 0 ? 'Capturar anverso' : 'Capturar reverso' }), capturas.length > 0 && (_jsxs(Button, { variant: "subtle", color: "gray", leftSection: _jsx(RotateCcw, { size: 14 }), onClick: repetirUltima, children: ["Repetir ", capturas.length === 1 ? 'anverso' : 'reverso'] }))] }), _jsx(Button, { color: "serene", leftSection: _jsx(ScanLine, { size: 16 }), onClick: leer, disabled: capturas.length === 0, children: "Leer documento" })] })] }) }));
+                    } }, allowDeselect: false })), errorCamara ? (_jsx(Alert, { color: "salu-yellow", variant: "light", icon: _jsx(AlertTriangle, { size: 16 }), children: _jsxs(Group, { justify: "space-between", wrap: "nowrap", children: [_jsx(Text, { size: "sm", children: errorCamara }), _jsx(Button, { size: "compact-xs", variant: "subtle", leftSection: _jsx(RotateCcw, { size: 12 }), onClick: () => void arrancar(dispositivoId), children: t.reintentar })] }) })) : (_jsxs(Box, { pos: "relative", bg: "dark.8", style: { borderRadius: 8, overflow: 'hidden', minHeight: 240 }, children: [_jsx("video", { ref: videoRef, autoPlay: true, playsInline: true, muted: true, style: { width: '100%', display: 'block', maxHeight: '55vh', objectFit: 'contain' } }), iniciando && (_jsx(Group, { pos: "absolute", inset: 0, justify: "center", align: "center", children: _jsx(Loader, { color: "white", size: "sm" }) }))] })), capturas.length > 0 && (_jsx(Group, { gap: "sm", children: capturas.map((c, i) => (_jsxs(Stack, { gap: 2, align: "center", children: [_jsx(Image, { src: c.url, alt: i === 0 ? t.anverso : t.reverso, w: 120, radius: "sm" }), _jsx(Text, { size: "xs", c: "dimmed", children: i === 0 ? t.anverso : t.reverso })] }, c.url))) })), _jsxs(Group, { justify: "space-between", wrap: "wrap", children: [_jsxs(Group, { gap: "xs", children: [_jsx(Button, { variant: "light", color: "serene", leftSection: _jsx(Camera, { size: 16 }), onClick: () => void capturar(), disabled: !puedeCapturar, children: capturas.length === 0 ? t.capturarAnverso : t.capturarReverso }), capturas.length > 0 && (_jsx(Button, { variant: "subtle", color: "gray", leftSection: _jsx(RotateCcw, { size: 14 }), onClick: repetirUltima, children: capturas.length === 1 ? t.repetirAnverso : t.repetirReverso }))] }), _jsx(Button, { color: "serene", leftSection: _jsx(ScanLine, { size: 16 }), onClick: leer, disabled: capturas.length === 0, children: t.leerDocumento })] })] }) }));
 }
 //# sourceMappingURL=WebcamCaptureModal.js.map

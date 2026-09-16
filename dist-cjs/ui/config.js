@@ -13,6 +13,7 @@
 // al cargar la aplicación.
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.mensajeDeError = exports.config = exports.hayTraspasoQr = exports.escanerConfigurado = exports.configurarEscanerDocumentos = void 0;
+const textos_1 = require("./textos");
 let _config = null;
 /** Se llama una vez, al arrancar la app. */
 function configurarEscanerDocumentos(config) {
@@ -29,7 +30,7 @@ function hayTraspasoQr() {
 exports.hayTraspasoQr = hayTraspasoQr;
 function config() {
     if (!_config) {
-        throw new Error('El escáner de documentos no está configurado: llama a configurarEscanerDocumentos() al arrancar la app.');
+        throw new Error((0, textos_1.textosUI)().errorEscanerNoConfigurado);
     }
     return _config;
 }

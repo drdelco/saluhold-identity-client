@@ -16,6 +16,8 @@
 //  - Resolución: 1600 px de lado mayor bastan para leer un documento de 85 mm.
 //    Subir a 2048 encarece la llamada sin mejorar la lectura.
 
+import { textosUI } from './textos';
+
 export interface ImagenParaIA {
   base64: string;      // SIN el prefijo 'data:...;base64,'
   mimeType: 'image/jpeg';
@@ -87,7 +89,7 @@ export async function comprimirParaIA(file: File, opts: Opciones = {}): Promise<
     canvas.width = w;
     canvas.height = h;
     const ctx = canvas.getContext('2d');
-    if (!ctx) throw new Error('No se pudo preparar la imagen en este navegador.');
+    if (!ctx) throw new Error(textosUI().errorPrepararImagen);
     ctx.drawImage(fuente, 0, 0, w, h);
     return { base64: aBase64(canvas.toDataURL('image/jpeg', q)), w, h };
   };

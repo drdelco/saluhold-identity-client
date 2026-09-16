@@ -29,6 +29,7 @@ import {
   type DatosDocumento,
 } from './documento';
 import { config, mensajeDeError, type PacienteCoincidente } from './config';
+import { textosUI } from './textos';
 
 export type DecisionEscaneo =
   /** El NIF ya existe: hay que vincular o abrir la ficha, no crear otra. */
@@ -126,7 +127,7 @@ export function useScanIdDocument() {
       }
       return lectura;
     } catch (e: unknown) {
-      setError(mensajeDeError(e, 'No se ha podido leer el documento.'));
+      setError(mensajeDeError(e, textosUI().errorLeerDocumento));
       return null;
     } finally {
       // Las fotos no se conservan en ningún estado ni caché: el array de
@@ -168,7 +169,7 @@ export function useScanIdDocument() {
       const hay = conAcceso.length > 0 || sinAcceso.length > 0;
       return { ...base, decision: hay ? 'found' : 'create', conAcceso, sinAcceso };
     } catch (e: unknown) {
-      setError(mensajeDeError(e, 'No se ha podido comprobar el documento.'));
+      setError(mensajeDeError(e, textosUI().errorComprobarDocumento));
       return null;
     } finally {
       setEscaneando(false);

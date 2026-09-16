@@ -17,6 +17,7 @@
 // formulario sí son distintos de verdad (SaluFile firma vinculaciones
 // presenciales, SaluFirst asigna médico e idioma, el portal elige clínica), y
 // meterlos todos en un componente con huecos sería peor que tener tres modales.
+import { textosUI } from './textos';
 export const FORM_ALTA_VACIO = {
     nif: '', nombre: '', apellidos: '', sexo: '', fechaNacimiento: '',
     nacionalidad: '', prefijoTelefono: '+34', telefono: '', email: '',
@@ -93,28 +94,32 @@ export function aplicarLecturaAlAlta(actual, leido) {
  * Sin documento el criterio cambia: lo único que permite volver a encontrar a
  * esa persona es el nombre y una forma de contacto, así que se exige una de las
  * dos. El servidor lo vuelve a comprobar; esto es para no hacer ir y volver.
+ *
+ * El aviso sale del diccionario y se lee al llamar, no al importar: quien enseña
+ * este texto es SaluFirst, que cambia de idioma sin recargar.
  */
 export function validarAlta(form, perfil, opciones = {}) {
+    const t = textosUI();
     if (!form.nombre.trim() || !form.apellidos.trim()) {
-        return 'El nombre y los apellidos son obligatorios.';
+        return t.validacionNombreApellidos;
     }
     if (opciones.provisional) {
         if (!form.email.trim() && !form.telefono.trim()) {
-            return 'Sin documento hace falta al menos un email o un teléfono para poder completar la ficha más adelante.';
+            return t.validacionContactoSinDocumento;
         }
         return null;
     }
     for (const campo of perfil.obligatorios) {
         if (campo === 'nif' && !form.nif.trim()) {
-            return 'El documento de identidad es obligatorio.';
+            return t.validacionNifObligatorio;
         }
         if (campo === 'direccion' && !form.calle.trim()) {
-            return 'La dirección es obligatoria.';
+            return t.validacionDireccionObligatoria;
         }
         if (campo === 'email' && !form.email.trim())
-            return 'El email es obligatorio.';
+            return t.validacionEmailObligatorio;
         if (campo === 'telefono' && !form.telefono.trim())
-            return 'El teléfono es obligatorio.';
+            return t.validacionTelefonoObligatorio;
     }
     return null;
 }

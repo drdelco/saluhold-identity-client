@@ -18,6 +18,7 @@
 //    Subir a 2048 encarece la llamada sin mejorar la lectura.
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.comprimirParaIA = void 0;
+const textos_1 = require("./textos");
 const POR_DEFECTO = {
     maxLado: 1600,
     calidad: 0.82,
@@ -72,7 +73,7 @@ async function comprimirParaIA(file, opts = {}) {
         canvas.height = h;
         const ctx = canvas.getContext('2d');
         if (!ctx)
-            throw new Error('No se pudo preparar la imagen en este navegador.');
+            throw new Error((0, textos_1.textosUI)().errorPrepararImagen);
         ctx.drawImage(fuente, 0, 0, w, h);
         return { base64: aBase64(canvas.toDataURL('image/jpeg', q)), w, h };
     };

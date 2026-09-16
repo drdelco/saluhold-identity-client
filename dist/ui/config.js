@@ -10,6 +10,7 @@
 // Todo lo que se pide son FUNCIONES, no valores: la instancia de Identity y la
 // clínica activa no existen hasta después del login, y este módulo se configura
 // al cargar la aplicación.
+import { textosUI } from './textos';
 let _config = null;
 /** Se llama una vez, al arrancar la app. */
 export function configurarEscanerDocumentos(config) {
@@ -23,7 +24,7 @@ export function hayTraspasoQr() {
 }
 export function config() {
     if (!_config) {
-        throw new Error('El escáner de documentos no está configurado: llama a configurarEscanerDocumentos() al arrancar la app.');
+        throw new Error(textosUI().errorEscanerNoConfigurado);
     }
     return _config;
 }

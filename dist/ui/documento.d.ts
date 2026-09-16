@@ -54,7 +54,13 @@ export interface LecturaFallida {
     ms: number;
 }
 export type ResultadoLectura = LecturaOk | LecturaFallida;
-/** Mensajes para el usuario. Ninguno culpa al usuario ni menciona la IA. */
+/**
+ * Mensajes para el usuario. Ninguno culpa al usuario ni menciona la IA.
+ *
+ * Son propiedades calculadas y no cadenas fijas para que el idioma se resuelva
+ * al LEER el mensaje y no al importar el módulo: si no, quedaría congelado el
+ * idioma que hubiera al arrancar la app.
+ */
 export declare const MENSAJE_FALLO: Record<MotivoFalloLectura, string>;
 /**
  * Lee un documento de identidad y devuelve los campos para prerrellenar.

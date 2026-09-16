@@ -19,6 +19,7 @@ import {
 } from './sesionEscaneo';
 import type { LecturaOk } from './documento';
 import { mensajeDeError } from './config';
+import { textosUI } from './textos';
 
 interface Props {
   opened: boolean;
@@ -29,6 +30,7 @@ interface Props {
 type Fase = 'creando' | 'esperando' | 'movil-conectado' | 'recibido' | 'caducado' | 'error';
 
 export default function QrHandoffModal({ opened, onClose, onLectura }: Props) {
+  const t = textosUI();
   const [fase, setFase] = useState<Fase>('creando');
   const [qr, setQr] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -76,10 +78,10 @@ export default function QrHandoffModal({ opened, onClose, onLectura }: Props) {
           if (sesionCaducada(s)) { setFase('caducado'); return; }
           if (s.status === 'scanning') setFase('movil-conectado');
         },
-        (e) => { setError(mensajeDeError(e, 'Se ha perdido la conexión con la sesión.')); setFase('error'); }
+        (e) => { setError(mensajeDeError(e, t.errorConexionSesion)); setFase('error'); }
       );
     } catch (e: any) {
-      setError(mensajeDeError(e, 'No se ha podido crear la sesión de escaneo.'));
+      setError(mensajeDeError(e, t.errorCrearSesion));
       setFase('error');
     }
   };
@@ -111,27 +113,23 @@ export default function QrHandoffModal({ opened, onClose, onLectura }: Props) {
     <Modal
       opened={opened}
       onClose={onClose}
-      title="Cámara del móvil"
+      title={t.camaraMovil}
       size="sm"
       centered
       zIndex={400}
     >
       <Stack gap="sm" align="center">
-        <Text size="sm" c="dimmed" ta="center">
-          Escanea el código con la cámara del móvil. Se abrirá la página para fotografiar
-          el documento (hay que estar identificado en esta clínica) y los datos aparecerán
-          aquí automáticamente.
-        </Text>
+        <Text size="sm" c="dimmed" ta="center">{t.instruccionesQr}</Text>
 
         {fase === 'creando' && <Center h={280}><Loader color="serene" /></Center>}
 
         {(fase === 'esperando' || fase === 'movil-conectado') && qr && (
           <>
-            <Image src={qr} alt="Código QR para el móvil" w={280} h={280} />
+            <Image src={qr} alt={t.altQr} w={280} h={280} />
             <Group gap="xs">
               {fase === 'movil-conectado'
-                ? <Badge color="serene" variant="light" leftSection={<Smartphone size={12} />}>Móvil conectado, esperando la foto…</Badge>
-                : <Badge color="gray" variant="light">Esperando al móvil…</Badge>}
+                ? <Badge color="serene" variant="light" leftSection={<Smartphone size={12} />}>{t.movilConectado}</Badge>
+                : <Badge color="gray" variant="light">{t.esperandoMovil}</Badge>}
               <Text size="xs" c="dimmed" ff="monospace">{mm}:{ss}</Text>
             </Group>
           </>
@@ -140,16 +138,16 @@ export default function QrHandoffModal({ opened, onClose, onLectura }: Props) {
         {fase === 'recibido' && (
           <Group gap="xs" c="serene.7">
             <CheckCircle2 size={18} />
-            <Text size="sm">Documento recibido.</Text>
+            <Text size="sm">{t.documentoRecibido}</Text>
           </Group>
         )}
 
         {fase === 'caducado' && (
           <Alert color="salu-yellow" variant="light" icon={<AlertTriangle size={16} />} w="100%">
             <Group justify="space-between" wrap="nowrap">
-              <Text size="sm">El código ha caducado.</Text>
+              <Text size="sm">{t.qrCaducado}</Text>
               <Button size="compact-xs" variant="subtle" leftSection={<RotateCcw size={12} />} onClick={() => void abrirSesion()}>
-                Generar otro
+                {t.generarOtroQr}
               </Button>
             </Group>
           </Alert>
@@ -160,15 +158,13 @@ export default function QrHandoffModal({ opened, onClose, onLectura }: Props) {
             <Group justify="space-between" wrap="nowrap">
               <Text size="sm">{error}</Text>
               <Button size="compact-xs" variant="subtle" leftSection={<RotateCcw size={12} />} onClick={() => void abrirSesion()}>
-                Reintentar
+                {t.reintentar}
               </Button>
             </Group>
           </Alert>
         )}
 
-        <Text size="xs" c="dimmed" ta="center">
-          La foto se lee en el móvil y no se guarda. Aquí solo llegan los datos extraídos.
-        </Text>
+        <Text size="xs" c="dimmed" ta="center">{t.avisoQrPie}</Text>
       </Stack>
     </Modal>
   );

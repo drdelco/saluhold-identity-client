@@ -514,4 +514,9 @@ export { comprimirParaIA } from './ui/imagen';
 // Esa es justo la parte donde la divergencia hace daño — de ahí salió que
 // SaluFact borrara la fecha de nacimiento en cada edición.
 export { FORM_ALTA_VACIO, PERFILES_ALTA, pide, aplicarLecturaAlAlta, validarAlta, construirDatosAlta, } from './ui/altaPaciente';
+// Los textos, también desde la raíz y por el mismo motivo: `validarAlta` y
+// `comprimirParaIA` devuelven mensajes al usuario, y quien los llama desde la
+// app nativa no puede importar `/ui` —es React Native, no hay Mantine—. Sin
+// esto, SaluFirst podría traducir la pantalla pero no lo que responde el SDK.
+export { configurarTextosUI, textosUI, TEXTOS_UI_ES } from './ui/textos';
 //# sourceMappingURL=index.js.map

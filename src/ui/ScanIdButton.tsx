@@ -21,6 +21,7 @@ import WebcamCaptureModal from './WebcamCaptureModal';
 import QrHandoffModal from './QrHandoffModal';
 import DocumentFacesPicker, { type OrigenFoto } from './DocumentFacesPicker';
 import { hayTraspasoQr } from './config';
+import { textosUI, type TextosUI } from './textos';
 
 interface Props {
   onResultado: (r: ResultadoEscaneo) => void;
@@ -32,10 +33,11 @@ interface Props {
   rutaMovil?: string;
 }
 
-const TEXTO_PROGRESO: Record<string, string> = {
-  comprimiendo: 'Preparando la imagen…',
-  leyendo: 'Leyendo el documento…',
-  buscando: 'Comprobando si ya existe…',
+/** Qué clave del diccionario rotula cada paso. El texto se busca al pintar. */
+const CLAVE_PROGRESO: Record<string, keyof TextosUI> = {
+  comprimiendo: 'progresoComprimiendo',
+  leyendo: 'progresoLeyendo',
+  buscando: 'progresoBuscando',
 };
 
 type Via = 'webcam' | 'qr' | OrigenFoto;
@@ -54,6 +56,7 @@ function esDispositivoMovil(rutaMovil?: string): boolean {
 }
 
 export default function ScanIdButton({ onResultado, size = 'sm', disabled, fullWidth, rutaMovil }: Props) {
+  const t = textosUI();
   const { escanear, procesarLectura, escaneando, progreso, error, limpiar } = useScanIdDocument();
   const [ultimoAviso, setUltimoAviso] = useState<string | null>(null);
   const [abierta, setAbierta] = useState<Via | null>(null);
@@ -72,9 +75,9 @@ export default function ScanIdButton({ onResultado, size = 'sm', disabled, fullW
 
   const entregar = (r: ResultadoEscaneo) => {
     if (r.avisos.includes('sin_reverso_no_hay_direccion')) {
-      setUltimoAviso('Leído. Para el domicilio hace falta también el reverso del documento.');
+      setUltimoAviso(t.avisoSinReverso);
     } else if (r.avisos.includes('documento_caducado')) {
-      setUltimoAviso('Ojo: el documento está caducado. Los datos se han extraído igualmente.');
+      setUltimoAviso(t.avisoDocumentoCaducado);
     }
     onResultado(r);
   };
@@ -96,7 +99,10 @@ export default function ScanIdButton({ onResultado, size = 'sm', disabled, fullW
     if (r) entregar(r);
   };
 
-  const etiqueta = escaneando ? (TEXTO_PROGRESO[progreso || ''] || 'Leyendo…') : 'Escanear DNI';
+  const claveProgreso = CLAVE_PROGRESO[progreso || ''];
+  const etiqueta = escaneando
+    ? (claveProgreso ? t[claveProgreso] : t.progresoGenerico)
+    : t.escanearDni;
 
   return (
     <Stack gap={6}>
@@ -116,7 +122,7 @@ export default function ScanIdButton({ onResultado, size = 'sm', disabled, fullW
             </Button>
             {!escaneando && (
               <Button size={size} variant="subtle" color="gray" onClick={() => abrir('archivo')} disabled={disabled}>
-                Subir fotos
+                {t.subirFotos}
               </Button>
             )}
           </>
@@ -136,18 +142,18 @@ export default function ScanIdButton({ onResultado, size = 'sm', disabled, fullW
               </Button>
             </Menu.Target>
             <Menu.Dropdown>
-              <Menu.Label>Fotografiar el documento con</Menu.Label>
+              <Menu.Label>{t.fotografiarCon}</Menu.Label>
               <Menu.Item leftSection={<Camera size={16} />} onClick={() => abrir('webcam')}>
-                Cámara de este equipo
+                {t.camaraEquipo}
               </Menu.Item>
               {conQr && (
                 <Menu.Item leftSection={<Smartphone size={16} />} onClick={() => abrir('qr')}>
-                  Cámara del móvil (QR)
+                  {t.camaraMovilQr}
                 </Menu.Item>
               )}
               <Menu.Divider />
               <Menu.Item leftSection={<Upload size={16} />} onClick={() => abrir('archivo')}>
-                Subir fotos del documento
+                {t.subirFotosDocumento}
               </Menu.Item>
             </Menu.Dropdown>
           </Menu>
@@ -155,11 +161,8 @@ export default function ScanIdButton({ onResultado, size = 'sm', disabled, fullW
       </Group>
 
       {/* Promesa explícita al usuario. Si algún día deja de ser cierta, este
-          texto tiene que caer con ello. */}
-      <Text size="xs" c="dimmed">
-        Anverso y, si quieres el domicilio, también el reverso.
-        La foto no se guarda: se procesa y se descarta.
-      </Text>
+          texto tiene que caer con ello — y sus traducciones también. */}
+      <Text size="xs" c="dimmed">{t.avisoEscanerPie}</Text>
 
       {ultimoAviso && (
         <Text size="xs" c="salu-yellow.8">{ultimoAviso}</Text>
@@ -175,7 +178,7 @@ export default function ScanIdButton({ onResultado, size = 'sm', disabled, fullW
               leftSection={<RotateCcw size={12} />}
               onClick={() => abrir(ultimaVia ?? (movil ? 'camara' : 'webcam'))}
             >
-              Repetir
+              {t.repetir}
             </Button>
           </Group>
         </Alert>

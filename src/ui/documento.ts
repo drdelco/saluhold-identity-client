@@ -5,6 +5,7 @@
 
 import { httpsCallable } from 'firebase/functions';
 import { config } from './config';
+import { textosUI } from './textos';
 
 export interface CaraDocumento {
   data: string;                                   // base64 sin prefijo
@@ -73,12 +74,18 @@ export interface LecturaFallida {
 
 export type ResultadoLectura = LecturaOk | LecturaFallida;
 
-/** Mensajes para el usuario. Ninguno culpa al usuario ni menciona la IA. */
+/**
+ * Mensajes para el usuario. Ninguno culpa al usuario ni menciona la IA.
+ *
+ * Son propiedades calculadas y no cadenas fijas para que el idioma se resuelva
+ * al LEER el mensaje y no al importar el módulo: si no, quedaría congelado el
+ * idioma que hubiera al arrancar la app.
+ */
 export const MENSAJE_FALLO: Record<MotivoFalloLectura, string> = {
-  ilegible: 'No se lee bien el documento. Acerca la cámara, evita reflejos y vuelve a intentarlo.',
-  no_es_documento: 'La imagen no parece un documento de identidad.',
-  respuesta_incompleta: 'No se ha podido completar la lectura. Inténtalo de nuevo.',
-  bloqueado_por_seguridad: 'No se ha podido procesar esta imagen. Prueba con otra foto.',
+  get ilegible() { return textosUI().lecturaIlegible; },
+  get no_es_documento() { return textosUI().lecturaNoEsDocumento; },
+  get respuesta_incompleta() { return textosUI().lecturaIncompleta; },
+  get bloqueado_por_seguridad() { return textosUI().lecturaBloqueada; },
 };
 
 /**

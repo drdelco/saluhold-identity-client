@@ -1,3 +1,4 @@
+export { configurarTextosUI, textosUI, TEXTOS_UI_ES, type TextosUI, } from './textos';
 export { configurarEscanerDocumentos, escanerConfigurado, hayTraspasoQr, mensajeDeError, type ConfigEscaner, type PacienteCoincidente, type ResultadoBusquedaNif, } from './config';
 export { leerDocumentoIdentidad, MENSAJE_FALLO, type CaraDocumento, type DatosDocumento, type DireccionDocumento, type LecturaOk, type LecturaFallida, type ResultadoLectura, type MotivoFalloLectura, } from './documento';
 export { comprimirParaIA, type ImagenParaIA } from './imagen';

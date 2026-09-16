@@ -15,7 +15,9 @@ import { Smartphone, RotateCcw, AlertTriangle, CheckCircle2 } from 'lucide-react
 import QRCode from 'qrcode';
 import { crearSesionEscaneo, escucharSesion, borrarSesion, urlDeSesion, sesionCaducada, SCAN_SESSION_TTL_MIN, } from './sesionEscaneo';
 import { mensajeDeError } from './config';
+import { textosUI } from './textos';
 export default function QrHandoffModal({ opened, onClose, onLectura }) {
+    const t = textosUI();
     const [fase, setFase] = useState('creando');
     const [qr, setQr] = useState(null);
     const [error, setError] = useState(null);
@@ -62,10 +64,10 @@ export default function QrHandoffModal({ opened, onClose, onLectura }) {
                 }
                 if (s.status === 'scanning')
                     setFase('movil-conectado');
-            }, (e) => { setError(mensajeDeError(e, 'Se ha perdido la conexión con la sesión.')); setFase('error'); });
+            }, (e) => { setError(mensajeDeError(e, t.errorConexionSesion)); setFase('error'); });
         }
         catch (e) {
-            setError(mensajeDeError(e, 'No se ha podido crear la sesión de escaneo.'));
+            setError(mensajeDeError(e, t.errorCrearSesion));
             setFase('error');
         }
     };
@@ -94,8 +96,8 @@ export default function QrHandoffModal({ opened, onClose, onLectura }) {
     }, [fase]);
     const mm = String(Math.floor(restante / 60)).padStart(2, '0');
     const ss = String(restante % 60).padStart(2, '0');
-    return (_jsx(Modal, { opened: opened, onClose: onClose, title: "C\u00E1mara del m\u00F3vil", size: "sm", centered: true, zIndex: 400, children: _jsxs(Stack, { gap: "sm", align: "center", children: [_jsx(Text, { size: "sm", c: "dimmed", ta: "center", children: "Escanea el c\u00F3digo con la c\u00E1mara del m\u00F3vil. Se abrir\u00E1 la p\u00E1gina para fotografiar el documento (hay que estar identificado en esta cl\u00EDnica) y los datos aparecer\u00E1n aqu\u00ED autom\u00E1ticamente." }), fase === 'creando' && _jsx(Center, { h: 280, children: _jsx(Loader, { color: "serene" }) }), (fase === 'esperando' || fase === 'movil-conectado') && qr && (_jsxs(_Fragment, { children: [_jsx(Image, { src: qr, alt: "C\u00F3digo QR para el m\u00F3vil", w: 280, h: 280 }), _jsxs(Group, { gap: "xs", children: [fase === 'movil-conectado'
-                                    ? _jsx(Badge, { color: "serene", variant: "light", leftSection: _jsx(Smartphone, { size: 12 }), children: "M\u00F3vil conectado, esperando la foto\u2026" })
-                                    : _jsx(Badge, { color: "gray", variant: "light", children: "Esperando al m\u00F3vil\u2026" }), _jsxs(Text, { size: "xs", c: "dimmed", ff: "monospace", children: [mm, ":", ss] })] })] })), fase === 'recibido' && (_jsxs(Group, { gap: "xs", c: "serene.7", children: [_jsx(CheckCircle2, { size: 18 }), _jsx(Text, { size: "sm", children: "Documento recibido." })] })), fase === 'caducado' && (_jsx(Alert, { color: "salu-yellow", variant: "light", icon: _jsx(AlertTriangle, { size: 16 }), w: "100%", children: _jsxs(Group, { justify: "space-between", wrap: "nowrap", children: [_jsx(Text, { size: "sm", children: "El c\u00F3digo ha caducado." }), _jsx(Button, { size: "compact-xs", variant: "subtle", leftSection: _jsx(RotateCcw, { size: 12 }), onClick: () => void abrirSesion(), children: "Generar otro" })] }) })), fase === 'error' && (_jsx(Alert, { color: "salu-red", variant: "light", icon: _jsx(AlertTriangle, { size: 16 }), w: "100%", children: _jsxs(Group, { justify: "space-between", wrap: "nowrap", children: [_jsx(Text, { size: "sm", children: error }), _jsx(Button, { size: "compact-xs", variant: "subtle", leftSection: _jsx(RotateCcw, { size: 12 }), onClick: () => void abrirSesion(), children: "Reintentar" })] }) })), _jsx(Text, { size: "xs", c: "dimmed", ta: "center", children: "La foto se lee en el m\u00F3vil y no se guarda. Aqu\u00ED solo llegan los datos extra\u00EDdos." })] }) }));
+    return (_jsx(Modal, { opened: opened, onClose: onClose, title: t.camaraMovil, size: "sm", centered: true, zIndex: 400, children: _jsxs(Stack, { gap: "sm", align: "center", children: [_jsx(Text, { size: "sm", c: "dimmed", ta: "center", children: t.instruccionesQr }), fase === 'creando' && _jsx(Center, { h: 280, children: _jsx(Loader, { color: "serene" }) }), (fase === 'esperando' || fase === 'movil-conectado') && qr && (_jsxs(_Fragment, { children: [_jsx(Image, { src: qr, alt: t.altQr, w: 280, h: 280 }), _jsxs(Group, { gap: "xs", children: [fase === 'movil-conectado'
+                                    ? _jsx(Badge, { color: "serene", variant: "light", leftSection: _jsx(Smartphone, { size: 12 }), children: t.movilConectado })
+                                    : _jsx(Badge, { color: "gray", variant: "light", children: t.esperandoMovil }), _jsxs(Text, { size: "xs", c: "dimmed", ff: "monospace", children: [mm, ":", ss] })] })] })), fase === 'recibido' && (_jsxs(Group, { gap: "xs", c: "serene.7", children: [_jsx(CheckCircle2, { size: 18 }), _jsx(Text, { size: "sm", children: t.documentoRecibido })] })), fase === 'caducado' && (_jsx(Alert, { color: "salu-yellow", variant: "light", icon: _jsx(AlertTriangle, { size: 16 }), w: "100%", children: _jsxs(Group, { justify: "space-between", wrap: "nowrap", children: [_jsx(Text, { size: "sm", children: t.qrCaducado }), _jsx(Button, { size: "compact-xs", variant: "subtle", leftSection: _jsx(RotateCcw, { size: 12 }), onClick: () => void abrirSesion(), children: t.generarOtroQr })] }) })), fase === 'error' && (_jsx(Alert, { color: "salu-red", variant: "light", icon: _jsx(AlertTriangle, { size: 16 }), w: "100%", children: _jsxs(Group, { justify: "space-between", wrap: "nowrap", children: [_jsx(Text, { size: "sm", children: error }), _jsx(Button, { size: "compact-xs", variant: "subtle", leftSection: _jsx(RotateCcw, { size: 12 }), onClick: () => void abrirSesion(), children: t.reintentar })] }) })), _jsx(Text, { size: "xs", c: "dimmed", ta: "center", children: t.avisoQrPie })] }) }));
 }
 //# sourceMappingURL=QrHandoffModal.js.map

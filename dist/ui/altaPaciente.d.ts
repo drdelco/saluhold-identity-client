@@ -74,6 +74,9 @@ export interface OpcionesAlta {
  * Sin documento el criterio cambia: lo único que permite volver a encontrar a
  * esa persona es el nombre y una forma de contacto, así que se exige una de las
  * dos. El servidor lo vuelve a comprobar; esto es para no hacer ir y volver.
+ *
+ * El aviso sale del diccionario y se lee al llamar, no al importar: quien enseña
+ * este texto es SaluFirst, que cambia de idioma sin recargar.
  */
 export declare function validarAlta(form: FormularioAlta, perfil: PerfilAlta, opciones?: OpcionesAlta): string | null;
 /**

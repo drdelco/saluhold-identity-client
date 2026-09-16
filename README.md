@@ -31,6 +31,44 @@ Con un solo sitio donde vive cada regla no hay convenio que traducir mal.
 El núcleo no importa nada: ni React, ni Firebase. Quien solo necesite el codec
 del sexo no paga por el resto.
 
+## Traducir la interfaz
+
+Todo el texto que pintan los componentes (`CamposAltaPaciente`, el escáner de
+documentos, los avisos del QR y de la cámara) y todo el que devuelven funciones
+como `validarAlta` sale de un único diccionario, `TextosUI`, con el castellano
+por defecto. SaluFile, SaluFact y el portal son monolingües y no tienen que
+tocar nada.
+
+SaluFirst sí: es la única app de la suite que ha de ser multilingüe siempre,
+para profesionales y para pacientes. Se sustituye entero o a trozos —lo que no
+se pase se queda en castellano— al arrancar y en cada cambio de idioma:
+
+```ts
+import { configurarTextosUI, type TextosUI } from '@saluhold/identity-client/ui';
+
+const construirTextos = (t: TFunction): Partial<TextosUI> => ({
+  nombre: t('alta.nombre'),
+  apellidos: t('alta.apellidos'),
+  telefono: t('alta.telefono'),
+  escanearDni: t('escaner.boton'),
+  // …
+});
+
+configurarTextosUI(construirTextos(i18n.t));
+i18n.on('languageChanged', () => configurarTextosUI(construirTextos(i18n.t)));
+```
+
+Cada llamada funde el parcial sobre el castellano, no sobre lo configurado
+antes, así que al cambiar de idioma no quedan restos del anterior. Las cadenas
+con variables llevan marcadores `{{campo}}` y hay que conservarlos en la
+traducción. `TEXTOS_UI_ES` es el diccionario completo, útil como referencia de
+qué claves existen; `configurarTextosUI` y `TextosUI` se exportan también desde
+la raíz del paquete, para la app nativa, que no puede importar `/ui`.
+
+Lo que **no** se traduce nunca son los valores que se guardan: el sexo sigue
+viajando como `H`/`M`/`O` y el país por defecto como `España`, aunque el rótulo
+se lea en otro idioma.
+
 ## Instalación
 
 ```bash

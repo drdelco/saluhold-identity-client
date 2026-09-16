@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Modal, Stack, Group, Button, Text, Select, Alert, Box, Image, Loader } from '@mantine/core';
 import { Camera, AlertTriangle, RotateCcw, ScanLine } from 'lucide-react';
 import { mensajeDeError } from './config';
+import { textosUI, interpolar, type TextosUI } from './textos';
 
 interface Props {
   opened: boolean;
@@ -22,14 +23,16 @@ interface Props {
 
 interface Captura { fichero: File; url: string }
 
-const MENSAJE_CAMARA: Record<string, string> = {
-  NotAllowedError: 'Permiso de cámara denegado. Actívalo en el navegador para este sitio.',
-  NotFoundError: 'No se ha encontrado ninguna cámara en este equipo.',
-  NotReadableError: 'La cámara está en uso por otra aplicación.',
-  OverconstrainedError: 'La cámara seleccionada no está disponible.',
+/** Qué clave rotula cada fallo de `getUserMedia`. El texto se busca al fallar. */
+const CLAVE_CAMARA: Record<string, keyof TextosUI> = {
+  NotAllowedError: 'camaraPermisoDenegado',
+  NotFoundError: 'camaraNoEncontrada',
+  NotReadableError: 'camaraEnUso',
+  OverconstrainedError: 'camaraNoDisponible',
 };
 
 export default function WebcamCaptureModal({ opened, onClose, onCapturado }: Props) {
+  const t = textosUI();
   const videoRef = useRef<HTMLVideoElement>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [dispositivos, setDispositivos] = useState<MediaDeviceInfo[]>([]);
@@ -66,7 +69,8 @@ export default function WebcamCaptureModal({ opened, onClose, onCapturado }: Pro
       const activo = stream.getVideoTracks()[0]?.getSettings().deviceId;
       if (activo) setDispositivoId(activo);
     } catch (e: any) {
-      setErrorCamara(MENSAJE_CAMARA[e?.name] || mensajeDeError(e, 'No se ha podido abrir la cámara.'));
+      const clave = CLAVE_CAMARA[e?.name];
+      setErrorCamara(clave ? t[clave] : mensajeDeError(e, t.errorAbrirCamara));
     } finally {
       setIniciando(false);
     }
@@ -75,7 +79,7 @@ export default function WebcamCaptureModal({ opened, onClose, onCapturado }: Pro
   useEffect(() => {
     if (!opened) return;
     if (!navigator.mediaDevices?.getUserMedia) {
-      setErrorCamara('Este navegador no permite usar la cámara.');
+      setErrorCamara(t.camaraNoSoportada);
       return;
     }
     void arrancar(null);
@@ -121,23 +125,23 @@ export default function WebcamCaptureModal({ opened, onClose, onCapturado }: Pro
     <Modal
       opened={opened}
       onClose={onClose}
-      title="Cámara de este equipo"
+      title={t.camaraEquipo}
       size="lg"
       centered
       zIndex={400}
     >
       <Stack gap="sm">
-        <Text size="sm" c="dimmed">
-          Coloca el documento plano, bien iluminado y ocupando la imagen. Primero el anverso;
-          el reverso solo hace falta para el domicilio. La foto no se guarda: se procesa y se descarta.
-        </Text>
+        <Text size="sm" c="dimmed">{t.instruccionesWebcam}</Text>
 
         {dispositivos.length > 1 && (
           <Select
             size="xs"
-            label="Cámara"
+            label={t.camara}
             value={dispositivoId}
-            data={dispositivos.map((d, i) => ({ value: d.deviceId, label: d.label || `Cámara ${i + 1}` }))}
+            data={dispositivos.map((d, i) => ({
+              value: d.deviceId,
+              label: d.label || interpolar(t.camaraNumerada, { n: i + 1 }),
+            }))}
             onChange={(v) => { if (v) { setDispositivoId(v); void arrancar(v); } }}
             allowDeselect={false}
           />
@@ -148,7 +152,7 @@ export default function WebcamCaptureModal({ opened, onClose, onCapturado }: Pro
             <Group justify="space-between" wrap="nowrap">
               <Text size="sm">{errorCamara}</Text>
               <Button size="compact-xs" variant="subtle" leftSection={<RotateCcw size={12} />} onClick={() => void arrancar(dispositivoId)}>
-                Reintentar
+                {t.reintentar}
               </Button>
             </Group>
           </Alert>
@@ -173,8 +177,8 @@ export default function WebcamCaptureModal({ opened, onClose, onCapturado }: Pro
           <Group gap="sm">
             {capturas.map((c, i) => (
               <Stack key={c.url} gap={2} align="center">
-                <Image src={c.url} alt={i === 0 ? 'Anverso' : 'Reverso'} w={120} radius="sm" />
-                <Text size="xs" c="dimmed">{i === 0 ? 'Anverso' : 'Reverso'}</Text>
+                <Image src={c.url} alt={i === 0 ? t.anverso : t.reverso} w={120} radius="sm" />
+                <Text size="xs" c="dimmed">{i === 0 ? t.anverso : t.reverso}</Text>
               </Stack>
             ))}
           </Group>
@@ -189,11 +193,11 @@ export default function WebcamCaptureModal({ opened, onClose, onCapturado }: Pro
               onClick={() => void capturar()}
               disabled={!puedeCapturar}
             >
-              {capturas.length === 0 ? 'Capturar anverso' : 'Capturar reverso'}
+              {capturas.length === 0 ? t.capturarAnverso : t.capturarReverso}
             </Button>
             {capturas.length > 0 && (
               <Button variant="subtle" color="gray" leftSection={<RotateCcw size={14} />} onClick={repetirUltima}>
-                Repetir {capturas.length === 1 ? 'anverso' : 'reverso'}
+                {capturas.length === 1 ? t.repetirAnverso : t.repetirReverso}
               </Button>
             )}
           </Group>
@@ -203,7 +207,7 @@ export default function WebcamCaptureModal({ opened, onClose, onCapturado }: Pro
             onClick={leer}
             disabled={capturas.length === 0}
           >
-            Leer documento
+            {t.leerDocumento}
           </Button>
         </Group>
       </Stack>

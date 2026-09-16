@@ -22,6 +22,7 @@
 import { doc, deleteDoc, onSnapshot, type Timestamp, type Unsubscribe } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { config } from './config';
+import { textosUI } from './textos';
 import type { LecturaOk } from './documento';
 
 export const SCAN_SESSION_TTL_MIN = 10;
@@ -43,7 +44,7 @@ export interface ScanSession {
 
 function qr() {
   const c = config();
-  if (!c.qr) throw new Error('El traspaso por QR no está configurado en esta app.');
+  if (!c.qr) throw new Error(textosUI().errorQrNoConfigurado);
   return c.qr;
 }
 

@@ -21,11 +21,12 @@
 import { doc, deleteDoc, onSnapshot } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { config } from './config';
+import { textosUI } from './textos';
 export const SCAN_SESSION_TTL_MIN = 10;
 function qr() {
     const c = config();
     if (!c.qr)
-        throw new Error('El traspaso por QR no está configurado en esta app.');
+        throw new Error(textosUI().errorQrNoConfigurado);
     return c.qr;
 }
 async function llamar(nombre, datos) {

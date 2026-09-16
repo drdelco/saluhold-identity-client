@@ -13,6 +13,7 @@
 
 import type { Functions } from 'firebase/functions';
 import type { Firestore } from 'firebase/firestore';
+import { textosUI } from './textos';
 
 /**
  * Un paciente que ya existe con ese documento.
@@ -74,9 +75,7 @@ export function hayTraspasoQr(): boolean {
 
 export function config(): ConfigEscaner {
   if (!_config) {
-    throw new Error(
-      'El escáner de documentos no está configurado: llama a configurarEscanerDocumentos() al arrancar la app.',
-    );
+    throw new Error(textosUI().errorEscanerNoConfigurado);
   }
   return _config;
 }

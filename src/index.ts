@@ -677,3 +677,10 @@ export type {
   PerfilAlta,
   OpcionesAlta,
 } from './ui/altaPaciente';
+
+// Los textos, también desde la raíz y por el mismo motivo: `validarAlta` y
+// `comprimirParaIA` devuelven mensajes al usuario, y quien los llama desde la
+// app nativa no puede importar `/ui` —es React Native, no hay Mantine—. Sin
+// esto, SaluFirst podría traducir la pantalla pero no lo que responde el SDK.
+export { configurarTextosUI, textosUI, TEXTOS_UI_ES } from './ui/textos';
+export type { TextosUI } from './ui/textos';

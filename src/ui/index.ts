@@ -15,6 +15,18 @@
 //     buscarPorNif: async (nif) => { … },
 //     qr: { db, auth, urlSesion: (c, s) => `${origin}/rx/scan/${s}` },
 //   });
+//
+// Y, solo si la app es multilingüe (SaluFirst), los rótulos en el idioma que
+// toque —al arrancar y en cada cambio de idioma—:
+//
+//   configurarTextosUI({ nombre: t('alta.nombre'), … });
+
+export {
+  configurarTextosUI,
+  textosUI,
+  TEXTOS_UI_ES,
+  type TextosUI,
+} from './textos';
 
 export {
   configurarEscanerDocumentos,

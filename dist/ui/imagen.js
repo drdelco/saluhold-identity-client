@@ -15,6 +15,7 @@
 //    Una foto de 12 MP son ~4 MB, y en base64 crece un tercio más.
 //  - Resolución: 1600 px de lado mayor bastan para leer un documento de 85 mm.
 //    Subir a 2048 encarece la llamada sin mejorar la lectura.
+import { textosUI } from './textos';
 const POR_DEFECTO = {
     maxLado: 1600,
     calidad: 0.82,
@@ -69,7 +70,7 @@ export async function comprimirParaIA(file, opts = {}) {
         canvas.height = h;
         const ctx = canvas.getContext('2d');
         if (!ctx)
-            throw new Error('No se pudo preparar la imagen en este navegador.');
+            throw new Error(textosUI().errorPrepararImagen);
         ctx.drawImage(fuente, 0, 0, w, h);
         return { base64: aBase64(canvas.toDataURL('image/jpeg', q)), w, h };
     };

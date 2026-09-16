@@ -22,6 +22,7 @@ import { useCallback, useRef, useState } from 'react';
 import { comprimirParaIA } from './imagen';
 import { leerDocumentoIdentidad, MENSAJE_FALLO, } from './documento';
 import { config, mensajeDeError } from './config';
+import { textosUI } from './textos';
 /**
  * Vuelca el borrador sobre el formulario sin romper el tipo.
  *
@@ -92,7 +93,7 @@ export function useScanIdDocument() {
             return lectura;
         }
         catch (e) {
-            setError(mensajeDeError(e, 'No se ha podido leer el documento.'));
+            setError(mensajeDeError(e, textosUI().errorLeerDocumento));
             return null;
         }
         finally {
@@ -133,7 +134,7 @@ export function useScanIdDocument() {
             return { ...base, decision: hay ? 'found' : 'create', conAcceso, sinAcceso };
         }
         catch (e) {
-            setError(mensajeDeError(e, 'No se ha podido comprobar el documento.'));
+            setError(mensajeDeError(e, textosUI().errorComprobarDocumento));
             return null;
         }
         finally {

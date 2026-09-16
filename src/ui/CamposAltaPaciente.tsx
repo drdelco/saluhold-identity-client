@@ -10,13 +10,14 @@
 
 import type { ReactNode } from 'react';
 import { Stack, Group, Box, Text, TextInput, NativeSelect, Select, SimpleGrid } from '@mantine/core';
-import { OPCIONES_SEXO } from '../sexo';
+import { OPCIONES_SEXO, type SexoIdentity } from '../sexo';
 import { validarIdentificador } from '../identificador';
 import {
   pide,
   type FormularioAlta,
   type PerfilAlta,
 } from './altaPaciente';
+import { textosUI, interpolar } from './textos';
 
 export interface CamposAltaPacienteProps {
   perfil: PerfilAlta;
@@ -47,29 +48,48 @@ export interface CamposAltaPacienteProps {
   autoFocusNombre?: boolean;
 }
 
-const AVISO_REVISAR = 'El lector no lo leyó con seguridad: compruébalo.';
-
 export default function CamposAltaPaciente({
   perfil, valores, onChange, provisional = false, disabled = false,
   revisar = [], paises, idiomas, prefijoSlot, secciones = true, autoFocusNombre = false,
 }: CamposAltaPacienteProps) {
-  const marca = (campo: string) => (revisar.includes(campo) ? AVISO_REVISAR : undefined);
+  const t = textosUI();
+  const marca = (campo: string) => (revisar.includes(campo) ? t.avisoRevisar : undefined);
 
   const Seccion = ({ children }: { children: string }) =>
     secciones ? <Text size="sm" fw={600} c="dimmed" tt="uppercase">{children}</Text> : null;
+
+  // El VALOR es el contrato de Identity ('H' es hombre, 'M' es MUJER) y no se
+  // traduce nunca; lo único que cambia de idioma es el rótulo.
+  const rotuloSexo: Record<SexoIdentity, string> = {
+    H: t.sexoHombre, M: t.sexoMujer, O: t.sexoOtro,
+  };
 
   // Solo se comprueba la letra de un DNI o un NIE; un pasaporte no la tiene, y
   // ahí `validarIdentificador` devuelve 'no-aplica'.
   const validacion = !provisional && valores.nif.trim() ? validarIdentificador(valores.nif) : null;
 
+  // El aviso se redacta AQUÍ y no se usa `validacion.mensaje`: ese lo compone el
+  // núcleo, que comparten también las Cloud Functions, y viene siempre en
+  // castellano. Los datos del fallo sí salen de allí.
+  const errorNif = validacion?.estado === 'invalido'
+    ? interpolar(
+      validacion.tipo === 'DNI' ? t.nifLetraIncorrectaDni : t.nifLetraIncorrectaNie,
+      {
+        numero: validacion.normalizado.slice(0, 8),
+        esperada: validacion.letraEsperada,
+        letra: validacion.normalizado.slice(8),
+      },
+    )
+    : undefined;
+
   return (
     <Stack gap="md">
-      <Seccion>Identidad</Seccion>
+      <Seccion>{t.seccionIdentidad}</Seccion>
 
       {!provisional && pide(perfil, 'nif') && (
         <TextInput
-          label="Documento de identidad"
-          placeholder="12345678Z"
+          label={t.nif}
+          placeholder={t.nifPlaceholder}
           required
           disabled={disabled}
           value={valores.nif}
@@ -77,10 +97,10 @@ export default function CamposAltaPaciente({
             const v = e.currentTarget.value.toUpperCase();
             onChange({ nif: v });
           }}
-          error={validacion?.estado === 'invalido' ? validacion.mensaje : undefined}
+          error={errorNif}
           description={
             validacion?.estado === 'valido'
-              ? `${validacion.tipo} correcto`
+              ? interpolar(t.nifValido, { tipo: validacion.tipo })
               : marca('nif')
           }
           styles={{ input: { fontFamily: 'monospace' } }}
@@ -89,7 +109,7 @@ export default function CamposAltaPaciente({
 
       <SimpleGrid cols={2}>
         <TextInput
-          label="Nombre"
+          label={t.nombre}
           required
           autoFocus={autoFocusNombre}
           disabled={disabled}
@@ -98,7 +118,7 @@ export default function CamposAltaPaciente({
           description={marca('nombre')}
         />
         <TextInput
-          label="Apellidos"
+          label={t.apellidos}
           required
           disabled={disabled}
           value={valores.apellidos}
@@ -107,11 +127,11 @@ export default function CamposAltaPaciente({
         />
       </SimpleGrid>
 
-      <Seccion>Contacto</Seccion>
+      <Seccion>{t.seccionContacto}</Seccion>
 
       <SimpleGrid cols={2}>
         <TextInput
-          label="Email"
+          label={t.email}
           type="email"
           required={provisional}
           disabled={disabled}
@@ -119,7 +139,7 @@ export default function CamposAltaPaciente({
           onChange={(e) => { const v = e.currentTarget.value; onChange({ email: v }); }}
         />
         <Box>
-          <Text size="sm" fw={500} mb={2}>Teléfono{provisional ? ' *' : ''}</Text>
+          <Text size="sm" fw={500} mb={2}>{t.telefono}{provisional ? ' *' : ''}</Text>
           <Group gap={6} wrap="nowrap" align="flex-start">
             {prefijoSlot}
             <TextInput
@@ -134,27 +154,27 @@ export default function CamposAltaPaciente({
       </SimpleGrid>
 
       {provisional && (
-        <Text size="xs" c="dimmed">
-          Indica al menos uno de los dos: sin documento, es lo único con lo que se podrá
-          volver a identificar al paciente para completar su ficha.
-        </Text>
+        <Text size="xs" c="dimmed">{t.contactoObligatorioProvisional}</Text>
       )}
 
       {(pide(perfil, 'sexo') || pide(perfil, 'fechaNacimiento') || pide(perfil, 'idiomaInforme')) && (
         <SimpleGrid cols={3}>
           {pide(perfil, 'sexo') && (
             <NativeSelect
-              label="Sexo"
+              label={t.sexo}
               disabled={disabled}
               value={valores.sexo}
               onChange={(e) => { const v = e.currentTarget.value; onChange({ sexo: v }); }}
-              data={[{ value: '', label: '-- Seleccionar --' }, ...OPCIONES_SEXO]}
+              data={[
+                { value: '', label: t.seleccionar },
+                ...OPCIONES_SEXO.map(o => ({ value: o.value, label: rotuloSexo[o.value] })),
+              ]}
               description={marca('sexo')}
             />
           )}
           {pide(perfil, 'fechaNacimiento') && (
             <TextInput
-              label="Fecha de nacimiento"
+              label={t.fechaNacimiento}
               type="date"
               disabled={disabled}
               value={valores.fechaNacimiento}
@@ -164,7 +184,7 @@ export default function CamposAltaPaciente({
           )}
           {pide(perfil, 'idiomaInforme') && idiomas && (
             <NativeSelect
-              label="Idioma de los informes"
+              label={t.idiomaInformes}
               disabled={disabled}
               value={valores.idiomaInforme}
               onChange={(e) => { const v = e.currentTarget.value; onChange({ idiomaInforme: v }); }}
@@ -179,11 +199,11 @@ export default function CamposAltaPaciente({
           Sexo e idioma sí son NativeSelect, que con tres opciones es más rápido. */}
       {pide(perfil, 'nacionalidad') && (
         <Select
-          label="Nacionalidad"
+          label={t.nacionalidad}
           searchable
           clearable
-          nothingFoundMessage="Sin coincidencias"
-          placeholder="Sin especificar"
+          nothingFoundMessage={t.sinCoincidencias}
+          placeholder={t.sinEspecificar}
           disabled={disabled}
           value={valores.nacionalidad || null}
           onChange={(v) => onChange({ nacionalidad: v || '' })}
@@ -194,9 +214,9 @@ export default function CamposAltaPaciente({
 
       {pide(perfil, 'direccion') && (
         <Stack gap="sm">
-          <Seccion>Dirección</Seccion>
+          <Seccion>{t.seccionDireccion}</Seccion>
           <TextInput
-            label="Dirección"
+            label={t.direccion}
             disabled={disabled}
             value={valores.calle}
             onChange={(e) => { const v = e.currentTarget.value; onChange({ calle: v }); }}
@@ -204,31 +224,31 @@ export default function CamposAltaPaciente({
           />
           <SimpleGrid cols={4}>
             <TextInput
-              label="C. Postal"
+              label={t.codigoPostal}
               disabled={disabled}
               value={valores.codigoPostal}
               onChange={(e) => { const v = e.currentTarget.value; onChange({ codigoPostal: v }); }}
               description={marca('codigoPostal')}
             />
             <TextInput
-              label="Población"
+              label={t.poblacion}
               disabled={disabled}
               value={valores.poblacion}
               onChange={(e) => { const v = e.currentTarget.value; onChange({ poblacion: v }); }}
               description={marca('poblacion')}
             />
             <TextInput
-              label="Provincia"
+              label={t.provincia}
               disabled={disabled}
               value={valores.provincia}
               onChange={(e) => { const v = e.currentTarget.value; onChange({ provincia: v }); }}
               description={marca('provincia')}
             />
             <Select
-              label="País"
+              label={t.pais}
               searchable
               allowDeselect={false}
-              nothingFoundMessage="Sin coincidencias"
+              nothingFoundMessage={t.sinCoincidencias}
               disabled={disabled}
               value={valores.pais || null}
               onChange={(v) => onChange({ pais: v || '' })}
@@ -238,9 +258,7 @@ export default function CamposAltaPaciente({
           {/* En España la provincia y el municipio los normaliza el servidor a
               partir del código postal, así que se guardan siempre con la misma
               grafía venga de un teclado o de un DNI escaneado. */}
-          <Text size="xs" c="dimmed">
-            Si el país es España, la provincia y el municipio se normalizan solos al guardar.
-          </Text>
+          <Text size="xs" c="dimmed">{t.avisoNormalizacionEspana}</Text>
         </Stack>
       )}
     </Stack>
