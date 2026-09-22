@@ -85,7 +85,26 @@ export function fechaISO(v: unknown): string {
     else if (typeof o.seconds === 'number') d = new Date((o.seconds as number) * 1000);
   }
   if (!d || Number.isNaN(d.getTime())) return '';
-  return d.toISOString().slice(0, 10);
+  return diaEnMadrid(d);
+}
+
+/**
+ * El día natural en España, no en UTC. Las fechas canónicas se guardan a
+ * medianoche UTC (01:00/02:00 en Madrid: mismo día), pero las importadas de
+ * FileMaker están a medianoche de MADRID (22:00/23:00 UTC del día anterior) y
+ * `toISOString()` las enseñaba un día antes en los formularios.
+ */
+const FORMATO_DIA_MADRID = (() => {
+  try {
+    return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' });
+  } catch {
+    return null;
+  }
+})();
+
+function diaEnMadrid(d: Date): string {
+  const s = FORMATO_DIA_MADRID?.format(d);
+  return s && /^\d{4}-\d{2}-\d{2}$/.test(s) ? s : d.toISOString().slice(0, 10);
 }
 
 function norm(campo: string, v: unknown): string {
