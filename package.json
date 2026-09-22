@@ -1,6 +1,6 @@
 {
   "name": "@saluhold/identity-client",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Cliente JS compartido para el Local Server SaluHold (lectura de pacientes/empresas en Identity con caché local) y componentes de UI comunes a SaluFile, SaluFact y SaluFirst. Fuente única de verdad.",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

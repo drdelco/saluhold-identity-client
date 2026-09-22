@@ -21,7 +21,8 @@
  * a Cloud Functions o mostrar un error.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.TEXTOS_UI_ES = exports.textosUI = exports.configurarTextosUI = exports.avisoIdiomaNacionalidad = exports.construirDatosAlta = exports.validarAlta = exports.aplicarLecturaAlAlta = exports.pide = exports.PERFILES_ALTA = exports.FORM_ALTA_VACIO = exports.comprimirParaIA = exports.sexoDesdeExterno = exports.esMujer = exports.esHombre = exports.comoSexoIdentity = exports.displayASexo = exports.sexoADisplay = exports.OPCIONES_SEXO = exports.identificadorAceptable = exports.validarIdentificador = exports.tipoDeIdentificador = exports.canonizarIdentificador = exports.normalizarIdentificador = exports.localGetClinicConfig = exports.localBuscarProfesionalPorUID = exports.localObtenerProfesional = exports.localBuscarProfesionales = exports.localListarProfesionales = exports.localListarPacientesRecientes = exports.localObtenerPaciente = exports.localBuscarPacientes = exports.localObtenerCliente = exports.localClientesRecientes = exports.localBuscarClientes = exports.mapEmpresaToCliente = exports.mapPacienteToCliente = exports.localGet = exports.localPost = exports.getAcceleratorToken = exports.setAcceleratorToken = exports.ensureLocalServerChecked = exports.resetLocalServerCheck = exports.getLocalServerStats = exports.isLocalServerAvailable = exports.getLocalServerUrl = exports.hayAceleradorConfigurado = exports.setLocalServerHostExternal = exports.setLocalServerHost = void 0;
+exports.fichaEditableDesdeIdentity = exports.construirParchePaciente = exports.TEXTOS_UI_ES = exports.textosUI = exports.configurarTextosUI = exports.avisoIdiomaNacionalidad = exports.construirDatosAlta = exports.validarAlta = exports.aplicarLecturaAlAlta = exports.pide = exports.PERFILES_ALTA = exports.FORM_ALTA_VACIO = exports.comprimirParaIA = exports.sexoDesdeExterno = exports.esMujer = exports.esHombre = exports.comoSexoIdentity = exports.displayASexo = exports.sexoADisplay = exports.OPCIONES_SEXO = exports.identificadorAceptable = exports.validarIdentificador = exports.tipoDeIdentificador = exports.canonizarIdentificador = exports.normalizarIdentificador = exports.localGetClinicConfig = exports.localBuscarProfesionalPorUID = exports.localObtenerProfesional = exports.localBuscarProfesionales = exports.localListarProfesionales = exports.localListarPacientesRecientes = exports.localObtenerPaciente = exports.localBuscarPacientes = exports.localObtenerCliente = exports.localClientesRecientes = exports.localBuscarClientes = exports.mapEmpresaToCliente = exports.mapPacienteToCliente = exports.localGet = exports.localPost = exports.getAcceleratorToken = exports.setAcceleratorToken = exports.ensureLocalServerChecked = exports.resetLocalServerCheck = exports.getLocalServerStats = exports.isLocalServerAvailable = exports.getLocalServerUrl = exports.hayAceleradorConfigurado = exports.setLocalServerHostExternal = exports.setLocalServerHost = void 0;
+exports.fechaISO = void 0;
 // ═══════════════════════════════════════════════════════════════════════════
 // ESTADO Y CONFIGURACIÓN DE CONEXIÓN
 // ═══════════════════════════════════════════════════════════════════════════
@@ -289,6 +290,8 @@ function mapPacienteToCliente(p, clinicaId) {
         nombreRazon: `${p.apellidos || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, ''),
         email: p.email || undefined,
         telefono: p.telefono || undefined,
+        prefijoTelefono: p.prefijoTelefono || undefined,
+        idiomaInformes: p.idiomaInformes || undefined,
         direccion: {
             calle: p.direccion?.calle || '',
             codigoPostal: p.direccion?.codigoPostal || '',
@@ -570,4 +573,14 @@ var textos_1 = require("./ui/textos");
 Object.defineProperty(exports, "configurarTextosUI", { enumerable: true, get: function () { return textos_1.configurarTextosUI; } });
 Object.defineProperty(exports, "textosUI", { enumerable: true, get: function () { return textos_1.textosUI; } });
 Object.defineProperty(exports, "TEXTOS_UI_ES", { enumerable: true, get: function () { return textos_1.TEXTOS_UI_ES; } });
+// ═══════════════════════════════════════════════════════════════════════════
+// EDICIÓN DE PACIENTE: solo lo cambiado
+// ═══════════════════════════════════════════════════════════════════════════
+// Toda pantalla que edita un paciente manda a `actualizarPacienteCanonico` el
+// resultado de `construirParchePaciente(fichaLeída, formulario)`: solo lo que
+// cambió, y lo vaciado a propósito en `borrar`. Sin ficha leída, no se guarda.
+var parchePaciente_1 = require("./parchePaciente");
+Object.defineProperty(exports, "construirParchePaciente", { enumerable: true, get: function () { return parchePaciente_1.construirParchePaciente; } });
+Object.defineProperty(exports, "fichaEditableDesdeIdentity", { enumerable: true, get: function () { return parchePaciente_1.fichaEditableDesdeIdentity; } });
+Object.defineProperty(exports, "fechaISO", { enumerable: true, get: function () { return parchePaciente_1.fechaISO; } });
 //# sourceMappingURL=index.js.map

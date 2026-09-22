@@ -45,6 +45,9 @@ export interface Cliente {
   tipoIdentificador?: 'DNI' | 'NIE' | 'PASAPORTE' | 'OTRO';
   email?: string;
   telefono?: string;
+  prefijoTelefono?: string;
+  /** Idioma en que se le escribe (`pacientes.idiomaInformes`). Ausente = no consta. */
+  idiomaInformes?: string;
   direccion: ClienteDireccion;
   esExterno: boolean;
   tieneEmail?: boolean;
@@ -60,6 +63,9 @@ export interface RawPaciente {
   tipoIdentificador?: 'DNI' | 'NIE' | 'PASAPORTE' | 'OTRO';
   email?: string;
   telefono?: string;
+  prefijoTelefono?: string | null;
+  idiomaInformes?: string | null;
+  nacionalidad?: string | null;
   fechaNacimiento?: string;
   sexo?: string;
   direccion?: { calle?: string; codigoPostal?: string; poblacion?: string; provincia?: string; pais?: string };
@@ -365,6 +371,8 @@ export function mapPacienteToCliente(p: RawPaciente, clinicaId?: string): Client
     nombreRazon: `${p.apellidos || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, ''),
     email: p.email || undefined,
     telefono: p.telefono || undefined,
+    prefijoTelefono: p.prefijoTelefono || undefined,
+    idiomaInformes: p.idiomaInformes || undefined,
     direccion: {
       calle: p.direccion?.calle || '',
       codigoPostal: p.direccion?.codigoPostal || '',
@@ -685,3 +693,20 @@ export type {
 // esto, SaluFirst podría traducir la pantalla pero no lo que responde el SDK.
 export { configurarTextosUI, textosUI, TEXTOS_UI_ES } from './ui/textos';
 export type { TextosUI } from './ui/textos';
+
+// ═══════════════════════════════════════════════════════════════════════════
+// EDICIÓN DE PACIENTE: solo lo cambiado
+// ═══════════════════════════════════════════════════════════════════════════
+// Toda pantalla que edita un paciente manda a `actualizarPacienteCanonico` el
+// resultado de `construirParchePaciente(fichaLeída, formulario)`: solo lo que
+// cambió, y lo vaciado a propósito en `borrar`. Sin ficha leída, no se guarda.
+export {
+  construirParchePaciente,
+  fichaEditableDesdeIdentity,
+  fechaISO,
+} from './parchePaciente';
+export type {
+  FichaPacienteEditable,
+  DireccionEditable,
+  ParchePaciente,
+} from './parchePaciente';

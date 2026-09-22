@@ -39,6 +39,9 @@ export interface Cliente {
     tipoIdentificador?: 'DNI' | 'NIE' | 'PASAPORTE' | 'OTRO';
     email?: string;
     telefono?: string;
+    prefijoTelefono?: string;
+    /** Idioma en que se le escribe (`pacientes.idiomaInformes`). Ausente = no consta. */
+    idiomaInformes?: string;
     direccion: ClienteDireccion;
     esExterno: boolean;
     tieneEmail?: boolean;
@@ -53,6 +56,9 @@ export interface RawPaciente {
     tipoIdentificador?: 'DNI' | 'NIE' | 'PASAPORTE' | 'OTRO';
     email?: string;
     telefono?: string;
+    prefijoTelefono?: string | null;
+    idiomaInformes?: string | null;
+    nacionalidad?: string | null;
     fechaNacimiento?: string;
     sexo?: string;
     direccion?: {
@@ -183,4 +189,6 @@ export { FORM_ALTA_VACIO, PERFILES_ALTA, pide, aplicarLecturaAlAlta, validarAlta
 export type { AppAlta, CampoAlta, FormularioAlta, PerfilAlta, OpcionesAlta, } from './ui/altaPaciente';
 export { configurarTextosUI, textosUI, TEXTOS_UI_ES } from './ui/textos';
 export type { TextosUI } from './ui/textos';
+export { construirParchePaciente, fichaEditableDesdeIdentity, fechaISO, } from './parchePaciente';
+export type { FichaPacienteEditable, DireccionEditable, ParchePaciente, } from './parchePaciente';
 //# sourceMappingURL=index.d.ts.map

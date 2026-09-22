@@ -274,6 +274,8 @@ export function mapPacienteToCliente(p, clinicaId) {
         nombreRazon: `${p.apellidos || ''}, ${p.nombre || ''}`.trim().replace(/^,\s*/, ''),
         email: p.email || undefined,
         telefono: p.telefono || undefined,
+        prefijoTelefono: p.prefijoTelefono || undefined,
+        idiomaInformes: p.idiomaInformes || undefined,
         direccion: {
             calle: p.direccion?.calle || '',
             codigoPostal: p.direccion?.codigoPostal || '',
@@ -519,4 +521,11 @@ export { FORM_ALTA_VACIO, PERFILES_ALTA, pide, aplicarLecturaAlAlta, validarAlta
 // app nativa no puede importar `/ui` —es React Native, no hay Mantine—. Sin
 // esto, SaluFirst podría traducir la pantalla pero no lo que responde el SDK.
 export { configurarTextosUI, textosUI, TEXTOS_UI_ES } from './ui/textos';
+// ═══════════════════════════════════════════════════════════════════════════
+// EDICIÓN DE PACIENTE: solo lo cambiado
+// ═══════════════════════════════════════════════════════════════════════════
+// Toda pantalla que edita un paciente manda a `actualizarPacienteCanonico` el
+// resultado de `construirParchePaciente(fichaLeída, formulario)`: solo lo que
+// cambió, y lo vaciado a propósito en `borrar`. Sin ficha leída, no se guarda.
+export { construirParchePaciente, fichaEditableDesdeIdentity, fechaISO, } from './parchePaciente';
 //# sourceMappingURL=index.js.map
