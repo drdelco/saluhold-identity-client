@@ -34,6 +34,7 @@ export const TEXTOS_UI_ES = {
     seleccionar: '-- Seleccionar --',
     fechaNacimiento: 'Fecha de nacimiento',
     idiomaInformes: 'Idioma de los informes',
+    avisoIdiomaNacionalidad: 'Su nacionalidad es {{pais}}. ¿Le escribimos en español?',
     nacionalidad: 'Nacionalidad',
     direccion: 'Dirección',
     codigoPostal: 'C. Postal',

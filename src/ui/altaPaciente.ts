@@ -19,7 +19,7 @@
 // meterlos todos en un componente con huecos sería peor que tener tres modales.
 
 import type { DatosDocumento } from './documento';
-import { textosUI } from './textos';
+import { textosUI, interpolar } from './textos';
 
 /** Las apps que dan altas. 'saluHold' es el portal de administración. */
 export type AppAlta = 'saluFile' | 'saluFirst' | 'saluFact' | 'saluHold';
@@ -245,4 +245,53 @@ export function construirDatosAlta(
       }
       : {}),
   };
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// AVISO: NACIONALIDAD EXTRANJERA Y CORREO EN ESPAÑOL
+// ═══════════════════════════════════════════════════════════════════════════
+//
+// El idioma en que se le escribe a un paciente se elige en el alta y el valor
+// por defecto es español. Con un británico con NIE eso salió mal y nadie lo vio
+// (2026-09-22): el selector estaba ahí, pero en español ya, y no llamaba la
+// atención. Este aviso es solo eso, un aviso: no deduce el idioma de la
+// nacionalidad ni cambia nada — hay extranjeros que prefieren el español.
+//
+// No se avisa con las nacionalidades de habla hispana: preguntar a un mexicano
+// si le escribimos en español es ruido, y un aviso que salta sin motivo se
+// aprende a ignorar.
+
+/** Nacionalidades de lengua española, normalizadas con `claveNacionalidad`. */
+const NACIONALIDADES_HISPANAS = new Set([
+  'espana', 'mexico', 'colombia', 'argentina', 'peru', 'venezuela', 'chile',
+  'ecuador', 'guatemala', 'cuba', 'bolivia', 'republica dominicana', 'honduras',
+  'paraguay', 'el salvador', 'nicaragua', 'costa rica', 'panama', 'uruguay',
+  'puerto rico', 'guinea ecuatorial',
+]);
+
+/** Minúsculas, sin tildes ni espacios sobrantes: «España» y «ESPAÑA» son la misma. */
+function claveNacionalidad(nacionalidad: string): string {
+  return nacionalidad
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * El aviso que toca enseñar junto al selector de idioma, o null si no toca.
+ *
+ * Salta cuando la nacionalidad está puesta, no es de habla hispana y el idioma
+ * elegido es español (o no hay ninguno, que en Identity equivale a español).
+ */
+export function avisoIdiomaNacionalidad(
+  nacionalidad: string | null | undefined,
+  idioma: string | null | undefined,
+): string | null {
+  const pais = (nacionalidad || '').trim();
+  if (!pais) return null;
+  if (NACIONALIDADES_HISPANAS.has(claveNacionalidad(pais))) return null;
+  if ((idioma || 'es') !== 'es') return null;
+  return interpolar(textosUI().avisoIdiomaNacionalidad, { pais });
 }

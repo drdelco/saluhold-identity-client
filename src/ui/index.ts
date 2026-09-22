@@ -80,6 +80,7 @@ export {
   aplicarLecturaAlAlta,
   validarAlta,
   construirDatosAlta,
+  avisoIdiomaNacionalidad,
   type AppAlta,
   type CampoAlta,
   type FormularioAlta,

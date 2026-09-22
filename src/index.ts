@@ -669,6 +669,7 @@ export {
   aplicarLecturaAlAlta,
   validarAlta,
   construirDatosAlta,
+  avisoIdiomaNacionalidad,
 } from './ui/altaPaciente';
 export type {
   AppAlta,

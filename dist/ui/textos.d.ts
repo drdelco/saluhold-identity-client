@@ -22,6 +22,11 @@ export interface TextosUI {
     seleccionar: string;
     fechaNacimiento: string;
     idiomaInformes: string;
+    /**
+     * Aviso suave junto al idioma cuando la nacionalidad es extranjera y se le va
+     * a escribir en español. {{pais}}: la nacionalidad tal como está en la ficha.
+     */
+    avisoIdiomaNacionalidad: string;
     nacionalidad: string;
     direccion: string;
     codigoPostal: string;

@@ -14,6 +14,7 @@ import { OPCIONES_SEXO, type SexoIdentity } from '../sexo';
 import { validarIdentificador } from '../identificador';
 import {
   pide,
+  avisoIdiomaNacionalidad,
   type FormularioAlta,
   type PerfilAlta,
 } from './altaPaciente';
@@ -46,11 +47,18 @@ export interface CamposAltaPacienteProps {
   secciones?: boolean;
   /** El cursor empieza en el nombre. Útil cuando el modal abre directo al alta. */
   autoFocusNombre?: boolean;
+  /**
+   * Aviso suave bajo el idioma si la nacionalidad es extranjera y se le va a
+   * escribir en español (`avisoIdiomaNacionalidad`). No bloquea ni cambia nada.
+   * Opcional para que ninguna app lo reciba sin haberlo pedido.
+   */
+  avisarIdiomaNacionalidad?: boolean;
 }
 
 export default function CamposAltaPaciente({
   perfil, valores, onChange, provisional = false, disabled = false,
   revisar = [], paises, idiomas, prefijoSlot, secciones = true, autoFocusNombre = false,
+  avisarIdiomaNacionalidad = false,
 }: CamposAltaPacienteProps) {
   const t = textosUI();
   const marca = (campo: string) => (revisar.includes(campo) ? t.avisoRevisar : undefined);
@@ -67,6 +75,10 @@ export default function CamposAltaPaciente({
   // Solo se comprueba la letra de un DNI o un NIE; un pasaporte no la tiene, y
   // ahí `validarIdentificador` devuelve 'no-aplica'.
   const validacion = !provisional && valores.nif.trim() ? validarIdentificador(valores.nif) : null;
+
+  const avisoIdioma = avisarIdiomaNacionalidad
+    ? avisoIdiomaNacionalidad(valores.nacionalidad, valores.idiomaInforme)
+    : null;
 
   // El aviso se redacta AQUÍ y no se usa `validacion.mensaje`: ese lo compone el
   // núcleo, que comparten también las Cloud Functions, y viene siempre en
@@ -189,6 +201,9 @@ export default function CamposAltaPaciente({
               value={valores.idiomaInforme}
               onChange={(e) => { const v = e.currentTarget.value; onChange({ idiomaInforme: v }); }}
               data={idiomas}
+              description={avisoIdioma ?? undefined}
+              inputWrapperOrder={['label', 'input', 'description', 'error']}
+              styles={avisoIdioma ? { description: { color: 'var(--mantine-color-orange-text)' } } : undefined}
             />
           )}
         </SimpleGrid>

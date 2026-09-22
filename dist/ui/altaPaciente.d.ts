@@ -92,4 +92,11 @@ export declare function validarAlta(form: FormularioAlta, perfil: PerfilAlta, op
  * portal).
  */
 export declare function construirDatosAlta(form: FormularioAlta, perfil: PerfilAlta, opciones?: OpcionesAlta): Record<string, unknown>;
+/**
+ * El aviso que toca enseñar junto al selector de idioma, o null si no toca.
+ *
+ * Salta cuando la nacionalidad está puesta, no es de habla hispana y el idioma
+ * elegido es español (o no hay ninguno, que en Identity equivale a español).
+ */
+export declare function avisoIdiomaNacionalidad(nacionalidad: string | null | undefined, idioma: string | null | undefined): string | null;
 //# sourceMappingURL=altaPaciente.d.ts.map

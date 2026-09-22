@@ -513,7 +513,7 @@ export { comprimirParaIA } from './ui/imagen';
 // usar el componente, pero sí debe construir el payload igual que las demás.
 // Esa es justo la parte donde la divergencia hace daño — de ahí salió que
 // SaluFact borrara la fecha de nacimiento en cada edición.
-export { FORM_ALTA_VACIO, PERFILES_ALTA, pide, aplicarLecturaAlAlta, validarAlta, construirDatosAlta, } from './ui/altaPaciente';
+export { FORM_ALTA_VACIO, PERFILES_ALTA, pide, aplicarLecturaAlAlta, validarAlta, construirDatosAlta, avisoIdiomaNacionalidad, } from './ui/altaPaciente';
 // Los textos, también desde la raíz y por el mismo motivo: `validarAlta` y
 // `comprimirParaIA` devuelven mensajes al usuario, y quien los llama desde la
 // app nativa no puede importar `/ui` —es React Native, no hay Mantine—. Sin

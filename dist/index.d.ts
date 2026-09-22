@@ -179,7 +179,7 @@ export type { TipoIdentificador, ResultadoValidacion } from './identificador';
 export { OPCIONES_SEXO, sexoADisplay, displayASexo, comoSexoIdentity, esHombre, esMujer, sexoDesdeExterno, } from './sexo';
 export type { SexoIdentity, SexoDisplay } from './sexo';
 export { comprimirParaIA, type ImagenParaIA } from './ui/imagen';
-export { FORM_ALTA_VACIO, PERFILES_ALTA, pide, aplicarLecturaAlAlta, validarAlta, construirDatosAlta, } from './ui/altaPaciente';
+export { FORM_ALTA_VACIO, PERFILES_ALTA, pide, aplicarLecturaAlAlta, validarAlta, construirDatosAlta, avisoIdiomaNacionalidad, } from './ui/altaPaciente';
 export type { AppAlta, CampoAlta, FormularioAlta, PerfilAlta, OpcionesAlta, } from './ui/altaPaciente';
 export { configurarTextosUI, textosUI, TEXTOS_UI_ES } from './ui/textos';
 export type { TextosUI } from './ui/textos';

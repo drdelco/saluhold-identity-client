@@ -33,6 +33,12 @@ export interface CamposAltaPacienteProps {
     secciones?: boolean;
     /** El cursor empieza en el nombre. Útil cuando el modal abre directo al alta. */
     autoFocusNombre?: boolean;
+    /**
+     * Aviso suave bajo el idioma si la nacionalidad es extranjera y se le va a
+     * escribir en español (`avisoIdiomaNacionalidad`). No bloquea ni cambia nada.
+     * Opcional para que ninguna app lo reciba sin haberlo pedido.
+     */
+    avisarIdiomaNacionalidad?: boolean;
 }
-export default function CamposAltaPaciente({ perfil, valores, onChange, provisional, disabled, revisar, paises, idiomas, prefijoSlot, secciones, autoFocusNombre, }: CamposAltaPacienteProps): import("react").JSX.Element;
+export default function CamposAltaPaciente({ perfil, valores, onChange, provisional, disabled, revisar, paises, idiomas, prefijoSlot, secciones, autoFocusNombre, avisarIdiomaNacionalidad, }: CamposAltaPacienteProps): import("react").JSX.Element;
 //# sourceMappingURL=CamposAltaPaciente.d.ts.map

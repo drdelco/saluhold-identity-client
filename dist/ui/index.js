@@ -26,7 +26,7 @@ export { leerDocumentoIdentidad, MENSAJE_FALLO, } from './documento';
 export { comprimirParaIA } from './imagen';
 export { useScanIdDocument, aplicarBorrador, } from './useScanIdDocument';
 export { crearSesionEscaneo, escucharSesion, borrarSesion, abrirSesion, completarSesion, urlDeSesion, sesionCaducada, SCAN_SESSION_TTL_MIN, } from './sesionEscaneo';
-export { FORM_ALTA_VACIO, PERFILES_ALTA, pide, aplicarLecturaAlAlta, validarAlta, construirDatosAlta, } from './altaPaciente';
+export { FORM_ALTA_VACIO, PERFILES_ALTA, pide, aplicarLecturaAlAlta, validarAlta, construirDatosAlta, avisoIdiomaNacionalidad, } from './altaPaciente';
 export { default as CamposAltaPaciente } from './CamposAltaPaciente';
 export { default as ScanIdButton } from './ScanIdButton';
 export { default as DocumentFacesPicker } from './DocumentFacesPicker';
