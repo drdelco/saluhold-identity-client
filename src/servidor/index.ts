@@ -22,3 +22,10 @@ export {
   type DatosLiberacion,
   type ResultadoLiberacion,
 } from './liberarNif';
+
+export {
+  darDeAltaPacienteDesdeServidor,
+  type OrigenAltaServidor,
+  type DatosAltaServidor,
+  type ResultadoAltaServidor,
+} from './altaServidor';

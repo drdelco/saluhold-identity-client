@@ -8,4 +8,5 @@
 // reglas en vez de tener cada una su copia.
 export { vincularPacienteEnIdentity, clinicasDelGrupo, acunarNumeroHistoria, } from './vinculacion';
 export { liberarNifEnIdentity, } from './liberarNif';
+export { darDeAltaPacienteDesdeServidor, } from './altaServidor';
 //# sourceMappingURL=index.js.map
