@@ -7,7 +7,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  renderCorreo, MARCAS, TONOS, NEUTROS, TEXTOS_MARCO, IDIOMAS_SUITE, contraste, resolverAcento,
+  renderCorreo, sanearHtmlCorreo, MARCAS, TONOS, NEUTROS, TEXTOS_MARCO, IDIOMAS_SUITE, contraste, resolverAcento,
 } = require('../dist-cjs/correo');
 
 const TENANT = {
@@ -100,13 +100,220 @@ test('B: sin cabecera, sin imágenes ni color; membrete del remitente y «Enviad
   assert.equal(renderCorreo(base({ variante: 'B', tenant: TENANT })).fromName, 'Clínica Olivar');
 });
 
-test('un solo botón primario: el segundo baja a enlace', () => {
+test('un solo botón primario: el segundo es un botón secundario de verdad; `enlace` lo deja en texto', () => {
   const { html } = renderCorreo(base({ bloques: [
     { tipo: 'boton', texto: 'Uno', url: 'https://a.es/1' },
     { tipo: 'boton', texto: 'Dos', url: 'https://a.es/2' },
+    { tipo: 'boton', texto: 'Tres', url: 'https://a.es/3', enlace: true },
   ] }));
-  assert.equal((html.match(/<td bgcolor="#3d6589"/g) || []).length, 1);
-  assert.ok(html.includes('Dos&nbsp;&rarr;'));
+  assert.equal((html.match(/bgcolor="#3d6589"/g) || []).length, 1, 'un solo relleno');
+  // Dos: borde de 1 px del acento, fondo blanco, texto del acento.
+  assert.ok(/bgcolor="#ffffff" style="border-radius:8px;background-color:#ffffff;border:1px solid #3d6589;">\s*<a href="https:\/\/a\.es\/2" style="[^"]*color:#3d6589;/.test(html), 'Dos es botón secundario');
+  assert.ok(html.includes('Tres&nbsp;&rarr;'), 'Tres, enlace de texto');
+  // Enlace alternativo: el primario con su dirección debajo; el secundario, en la línea común.
+  assert.ok(html.includes('https://a.es/1</a>'));
+  assert.ok(html.includes('Si el botón no se muestra: <a href="https://a.es/2"'));
+});
+
+// ─── Bloques nuevos ─────────────────────────────────────────────────────────
+
+const ACCIONES = { tipo: 'acciones', botones: [
+  { texto: 'Confirmar', url: 'https://salufile.com/c/confirmar?t=1' },
+  { texto: 'Cancelar', url: 'https://salufile.com/c/cancelar?t=1', tono: 'peligro' },
+] };
+
+test('acciones: el primero primario, «peligro» con borde y texto del semántico, fila que se apila en el móvil', () => {
+  const { html, text } = renderCorreo(base({ variante: 'A', tenant: TENANT, bloques: [ACCIONES] }));
+  const acc = TENANT.colorPrimario;
+  assert.ok(/bgcolor="#2f6f62"[^>]*>\s*<a href="https:\/\/salufile\.com\/c\/confirmar\?t=1" style="[^"]*color:#ffffff;/.test(html), 'Confirmar relleno del acento del centro');
+  assert.ok(html.includes(`border:1px solid ${TONOS.peligro.borde};`), 'Cancelar con borde de peligro');
+  assert.ok(new RegExp(`cancelar\\?t=1" style="[^"]*color:${TONOS.peligro.texto};`).test(html), 'Cancelar con texto de peligro');
+  assert.ok(!html.includes(`background-color:${TONOS.peligro.fondo}`), 'peligro sin relleno');
+  assert.equal((html.match(/class="cx-acc"/g) || []).length, 2, 'una celda por botón');
+  assert.ok(html.includes('.cx-acc { display:block !important; width:100% !important;'), 'se apila en el móvil');
+  // Una sola línea de enlaces alternativos, sin la dirección larga.
+  assert.ok(html.includes('Si los botones no se muestran: <a href="https://salufile.com/c/confirmar?t=1"'));
+  assert.ok(html.includes(`>Confirmar</a> &middot; <a href="https://salufile.com/c/cancelar?t=1" style="color:${acc};`));
+  assert.ok(!html.includes('>https://salufile.com/c/confirmar?t=1</a>'), 'sin la URL entera');
+  assert.ok(text.includes('Confirmar: https://salufile.com/c/confirmar?t=1') && text.includes('Cancelar: https://salufile.com/c/cancelar?t=1'));
+});
+
+test('acciones tras un botón primario: ninguno más relleno; URLs malas fuera', () => {
+  const { html } = renderCorreo(base({ bloques: [
+    { tipo: 'boton', texto: 'Principal', url: 'https://a.es/p' },
+    { tipo: 'acciones', botones: [
+      { texto: 'Otra', url: 'https://a.es/o' },
+      { texto: 'Mala', url: 'javascript:alert(1)' },
+      { texto: '', url: 'https://a.es/vacio' },
+    ] },
+  ] }));
+  assert.equal((html.match(/bgcolor="#3d6589"/g) || []).length, 1);
+  assert.ok(!/javascript:/i.test(html));
+  assert.ok(!html.includes('a.es/vacio'));
+  assert.equal((html.match(/class="cx-acc"/g) || []).length, 1);
+});
+
+test('acciones en árabe: línea de enlaces traducida y hueco del lado contrario', () => {
+  const { html } = renderCorreo(base({ idioma: 'ar', bloques: [ACCIONES] }));
+  assert.ok(html.includes(TEXTOS_MARCO.ar.enlacesAlternativos));
+  assert.ok(html.includes('class="cx-acc" valign="top" style="padding:0 0 10px 10px;"'));
+  assert.ok(html.includes('align="right" class="cx-acciones"'));
+});
+
+const CICLO = {
+  tipo: 'ciclo', titulo: '¿Cuándo empezó tu última regla?', texto: 'Toca la respuesta y queda anotada.',
+  fechas: ['Hoy', 'Ayer', 'Hace 2 días', 'Hace 3 días', 'Hace 4 días', 'Hace 5 días', 'Hace 6 días'].map((t, i) => ({ texto: t, url: `https://ciclo.salufile.com/p?fur=2026-09-${String(27 - i).padStart(2, '0')}` })),
+  enlaces: [{ texto: 'Otra fecha', url: 'https://ciclo.salufile.com/p?fur=otra' }, { texto: 'Ya no tengo la regla (menopausia)', url: 'https://ciclo.salufile.com/p?menopausia=1' }],
+  nota: 'Tus datos son privados.',
+};
+
+test('ciclo: rejilla de fechas en botones pequeños del acento del correo, enlaces y nota; sin el rosa fijo', () => {
+  const { html, text } = renderCorreo(base({ variante: 'A', tenant: TENANT, bloques: [CICLO] }));
+  for (const f of CICLO.fechas) assert.ok(html.includes(`href="${f.url}"`), f.texto);
+  assert.equal((html.match(new RegExp(`border:1px solid ${TENANT.colorPrimario};border-radius:6px;`, 'g')) || []).length, 7, 'siete botones del acento del centro');
+  assert.equal((html.match(/<td width="25%" valign="top"/g) || []).length, 7, '4 columnas');
+  assert.equal((html.match(/<td width="25%" style="padding:3px;">&nbsp;<\/td>/g) || []).length, 1, 'hueco que completa la segunda fila');
+  assert.ok(html.includes('>Otra fecha</a>') && html.includes('menopausia=1'));
+  assert.ok(html.includes('Tus datos son privados.'));
+  for (const rosa of ['#DB2777', '#9D174D', '#FCE7F3', '#831843']) assert.ok(!html.toUpperCase().includes(rosa), rosa);
+  assert.ok(text.includes('- Ayer: https://ciclo.salufile.com/p?fur=2026-09-26'));
+  const tres = renderCorreo(base({ bloques: [{ ...CICLO, columnas: 3 }] })).html;
+  assert.equal((tres.match(/<td width="33%" valign="top"/g) || []).length, 7, '3 columnas');
+  assert.equal(renderCorreo(base({ bloques: [{ ...CICLO, fechas: [{ texto: 'x', url: 'javascript:1' }] }] })).html.includes('¿Cuándo'), false, 'sin fechas válidas no se pinta');
+});
+
+test('imagen: https o cid:, centrada, ancho acotado, pie; lo demás se descarta', () => {
+  const { html, text } = renderCorreo(base({ bloques: [{ tipo: 'imagen', src: 'https://salufile.com/qr/abc.png', alt: 'Código QR de la receta', ancho: 180, pie: 'Muestre este código en la farmacia.' }] }));
+  assert.ok(html.includes('<img src="https://salufile.com/qr/abc.png" alt="Código QR de la receta" width="180" style="display:block;margin:0 auto;width:100%;max-width:180px;height:auto;border:0;">'));
+  assert.ok(html.includes('Muestre este código en la farmacia.'));
+  assert.ok(text.includes('[Código QR de la receta]'));
+  assert.ok(renderCorreo(base({ bloques: [{ tipo: 'imagen', src: 'cid:firma-1', alt: 'Firma' }] })).html.includes('src="cid:firma-1"'));
+  assert.ok(renderCorreo(base({ bloques: [{ tipo: 'imagen', src: 'cid:x', alt: 'x', ancho: 5000 }] })).html.includes('max-width:520px'));
+  for (const malo of ['data:image/png;base64,AAAA', 'javascript:alert(1)', 'http://inseguro.es/a.png', 'https://a.es/a.png" onerror="alert(1)', '/relativa.png']) {
+    const h = renderCorreo(base({ bloques: [{ tipo: 'imagen', src: malo, alt: 'x' }] })).html;
+    assert.ok(!h.includes('max-width:200px'), malo);
+  }
+  assert.ok(!renderCorreo(base({ bloques: [{ tipo: 'imagen', src: 'cid:a', alt: MALO }] })).html.includes('onerror=alert(2)>'));
+});
+
+test('pasos: lista numerada con título por paso, en el acento; de derecha a izquierda en árabe', () => {
+  const b = { tipo: 'pasos', titulo: 'Cómo enviarlos', items: [{ titulo: 'Abra el enlace', texto: 'Desde el móvil o el ordenador.' }, { titulo: 'Elija los archivos' }, { titulo: '' }, { titulo: 'Pulse Enviar' }] };
+  const { html, text } = renderCorreo(base({ bloques: [b] }));
+  assert.ok(html.includes('color:#3d6589;text-align:center;">1</div>') && html.includes('>3</div>'));
+  assert.ok(!html.includes('>4</div>'), 'el paso vacío no cuenta');
+  assert.ok(html.includes('Abra el enlace') && html.includes('Desde el móvil o el ordenador.'));
+  assert.ok(text.includes('1. Abra el enlace\n   Desde el móvil o el ordenador.\n2. Elija los archivos\n3. Pulse Enviar'));
+  const ar = renderCorreo(base({ idioma: 'ar', bloques: [b] })).html;
+  assert.ok(ar.includes('style="padding:0 0 14px 12px;"') && ar.includes('text-align:right;"><p'));
+});
+
+// ─── HTML de confianza ──────────────────────────────────────────────────────
+
+test('htmlConfianza: pasa la lista blanca sin atributos, con los estilos del marco', () => {
+  const { html, text } = renderCorreo(base({ variante: 'B', remitente: { nombre: 'Dra. Ruiz' }, bloques: [{ tipo: 'htmlConfianza', html:
+    '<p style="color:red;font-size:40px" class="x">Hola, <strong>Carmen</strong>: <em>ya</em> tengo los <u>resultados</u>.<br/>Todo bien.</p>'
+    + '<ul><li><p>Hierro un mes más</p></li><li>Revisión en <b>octubre</b></li></ul>'
+    + '<ol><li>uno</li></ol><p><a href="https://salufile.com/x?a=1&amp;b=2" target="_blank" onclick="robar()">Ver informe</a> · <a href="mailto:hola@olivar.es">escríbanos</a> · <a href="tel:+34965123456">llámenos</a></p>' }] }));
+  assert.ok(html.includes('Hola, <strong>Carmen</strong>: <em>ya</em> tengo los <u>resultados</u>.<br>Todo bien.</p>'));
+  assert.ok(!html.includes('color:red') && !html.includes('font-size:40px') && !html.includes('class="x"'), 'estilos y clases fuera');
+  assert.ok(html.includes('<li style="margin:0 0 4px 0;"><p style="margin:0;'), 'párrafo dentro de lista sin margen');
+  assert.ok(html.includes('<a href="https://salufile.com/x?a=1&amp;b=2" style="color:'), 'href https conservado (y escapado)');
+  assert.ok(!/onclick|target=|_blank|robar/.test(html));
+  assert.ok(html.includes('href="mailto:hola@olivar.es"') && html.includes('href="tel:+34965123456"'));
+  assert.ok(text.includes('Hola, Carmen: ya tengo los resultados.\nTodo bien.'), 'texto plano');
+  assert.ok(text.includes('- Hierro un mes más') && !/<[a-z]/i.test(text));
+});
+
+test('htmlConfianza: XSS — todo lo que no está en la lista se escapa y no se ejecuta', () => {
+  const ataques = [
+    '<script>alert(1)</script>',
+    '<img src=x onerror=alert(2)>',
+    '<svg onload=alert(3)>',
+    '<iframe src="https://malo.es"></iframe>',
+    '<a href="javascript:alert(4)">a</a>',
+    '<a href="jav&#x61;script:alert(5)">b</a>',
+    '<a href="&#106;avascript:alert(6)">c</a>',
+    '<a href=" javascript:alert(7)">d</a>',
+    '<a href="java\tscript:alert(8)">e</a>',
+    '<a href="data:text/html,<script>alert(9)</script>">f</a>',
+    '<a href="http://inseguro.es">g</a>',
+    '<p onmouseover="alert(10)">h</p>',
+    '<style>body{display:none}</style>',
+    '<form action="https://malo.es"><input name=x></form>',
+    '<!--[if mso]><script>alert(11)</script><![endif]-->',
+    '<p>"><img src=x onerror=alert(12)></p>',
+    '<a href="https://ok.es" style="position:fixed">i</a>',
+    '<object data="x"></object><embed src="x"><math><mi>x</mi></math>',
+    '<scr<script>ipt>alert(13)</script>',
+    '<p>abierto <strong>sin cerrar <a href="https://ok.es">enlace',
+  ].join('\n');
+  const { html } = renderCorreo(base({ bloques: [{ tipo: 'htmlConfianza', html: ataques }, { tipo: 'parrafo', texto: 'DESPUÉS' }] }));
+  const cuerpo = html.slice(html.indexOf('<body'));
+  for (const etiqueta of ['script', 'img', 'svg', 'iframe', 'style', 'form', 'input', 'object', 'embed', 'math']) {
+    assert.ok(!new RegExp(`<${etiqueta}\\b`, 'i').test(cuerpo.replace(/<img src="https:\/\/salufile\.com\/icon-192\.png"/g, '')), `<${etiqueta}> vivo`);
+  }
+  assert.ok(!/href="\s*(javascript|data|jav|&#|http:)/i.test(cuerpo), 'href peligroso');
+  assert.ok(!/\son[a-z]+=/i.test(cuerpo.replace(/&[a-z#0-9]+;/gi, '')) || !/<[^>]+\son[a-z]+=/i.test(cuerpo), 'ningún manejador de eventos dentro de una etiqueta');
+  assert.ok(!/<[^>]+\son[a-z]+\s*=/i.test(cuerpo), 'manejador de eventos dentro de una etiqueta');
+  assert.ok(!cuerpo.includes('position:fixed'));
+  assert.ok(cuerpo.includes('&lt;script&gt;alert(1)&lt;/script&gt;'), 'se ve escapado');
+  assert.ok(cuerpo.includes('&lt;!--[if mso]&gt;'), 'comentario condicional escapado');
+  // Lo que quedó abierto se cierra antes de lo siguiente: el párrafo de después no queda dentro del enlace.
+  const i = cuerpo.indexOf('enlace');
+  const despues = cuerpo.indexOf('DESPUÉS');
+  assert.ok(cuerpo.slice(i, despues).includes('</a>') && cuerpo.slice(i, despues).includes('</strong>'), 'etiquetas equilibradas');
+  // Los enlaces con href descartado dejan su texto y su cierre no cierra nada ajeno.
+  assert.ok(cuerpo.includes('>a') || cuerpo.includes('a\n'));
+});
+
+test('htmlConfianza: lo que produce el editor (titulares, citas, color, tablas) se reduce, no se enseña como etiqueta', () => {
+  const { html } = renderCorreo(base({ bloques: [{ tipo: 'htmlConfianza', html:
+    '<h2>Resultados</h2><blockquote><p>Cita</p></blockquote><p><span style="color: rgb(255, 0, 0)">rojo</span> y <s>tachado</s> &amp; &nbsp;&copy; &#8364; &#x20AC; &bogus AT&T</p>'
+    + '<table><tbody><tr><td>Hb</td><td>12,1</td></tr></tbody></table><hr><pre><code>x</code></pre>' }] }));
+  assert.ok(html.includes('<p style="margin:0 0 14px 0;') && html.includes('><strong>Resultados</strong></p>'), 'titular → párrafo en negrita');
+  assert.ok(!/&lt;\/?(h2|blockquote|span|s|table|tbody|tr|td|hr|pre|code)&gt;/.test(html), 'sin etiquetas a la vista');
+  assert.ok(html.includes('rojo y tachado &amp; &nbsp;&copy; &#8364; &#x20AC; &amp;bogus AT&amp;T'), 'entidades bien formadas se conservan; & suelto se escapa');
+  assert.ok(html.includes('Hb 12,1'), 'celdas separadas');
+  assert.ok(!html.includes('rgb(255, 0, 0)'));
+});
+
+test('sanearHtmlCorreo exportada: vacío y no-cadena', () => {
+  assert.equal(sanearHtmlCorreo(''), '');
+  assert.equal(sanearHtmlCorreo(null), '');
+  assert.equal(sanearHtmlCorreo(42), '42');
+  assert.equal(sanearHtmlCorreo('</p></strong>solo'), 'solo', 'cierres huérfanos fuera');
+  assert.equal(sanearHtmlCorreo('<a href="javascript:x"><b>t</b></a></b>'), '<b>t</b>');
+});
+
+test('contraste de los botones secundarios y de «peligro» sobre blanco', () => {
+  for (const [app, m] of Object.entries(MARCAS)) assert.ok(contraste(m.accion, '#ffffff') >= 4.5, app);
+  assert.ok(contraste(TONOS.peligro.texto, '#ffffff') >= 4.5, 'texto peligro');
+  assert.ok(contraste(TONOS.peligro.borde, '#ffffff') >= 3, 'borde peligro (componente no textual, 3:1)');
+});
+
+test('bloques nuevos: escapan su texto', () => {
+  const { html } = renderCorreo(base({ variante: 'A', tenant: TENANT, bloques: [
+    { tipo: 'acciones', botones: [{ texto: MALO, url: 'https://a.es/1' }, { texto: MALO, url: 'https://a.es/2', tono: 'peligro' }] },
+    { tipo: 'ciclo', titulo: MALO, texto: MALO, fechas: [{ texto: MALO, url: `https://a.es/?f=${MALO}` }], enlaces: [{ texto: MALO, url: 'https://a.es/3' }], nota: MALO },
+    { tipo: 'imagen', src: 'https://a.es/i.png', alt: MALO, pie: MALO },
+    { tipo: 'pasos', titulo: MALO, items: [{ titulo: MALO, texto: MALO }] },
+  ] }));
+  assert.ok(!/<script/i.test(html));
+  assert.ok(!html.includes('onerror=alert(2)>'));
+  assert.ok(!html.includes('"><img src=x'));
+});
+
+test('recordatorio completo (acciones + subida de documentos + ciclo) por debajo de 40 KB', () => {
+  const { html } = renderCorreo(base({ variante: 'A', tenant: TENANT, bloques: [
+    ...BLOQUES.slice(0, 2), ACCIONES,
+    { tipo: 'caja', titulo: '¿Tiene documentos que compartir?', texto: 'Puede subirlos antes de su cita.' },
+    { tipo: 'boton', texto: 'Subir documentos', url: 'https://salufile.com/m/upload/abc', secundario: true },
+    CICLO,
+  ] }));
+  const kb = new TextEncoder().encode(html).length / 1024;
+  assert.ok(kb < 40, `${kb.toFixed(1)} KB`);
+  assert.ok(html.includes('Si los botones no se muestran: ') && html.includes('>Subir documentos</a>'), 'los tres en la misma línea');
+  assert.equal((html.match(/Si los botones no se muestran/g) || []).length, 1, 'una sola línea');
 });
 
 test('app o variante desconocidas lanzan', () => {

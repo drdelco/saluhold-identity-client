@@ -3,13 +3,16 @@
 // JS puro (sin Firebase, sin DOM, sin dependencias): lo importan igual las
 // Cloud Functions por la subruta CommonJS que un script de render en local.
 
-export { renderCorreo, escaparHtml } from './render';
+export { renderCorreo, escaparHtml, sanearHtmlCorreo } from './render';
 export type {
   VarianteCorreo,
   TenantCorreo,
   RemitenteCorreo,
   FilaDato,
   CeldaRejilla,
+  AccionCorreo,
+  EnlaceCorreo,
+  PasoCorreo,
   BloqueCorreo,
   OpcionesCorreo,
   CorreoRenderizado,

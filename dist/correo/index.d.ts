@@ -1,5 +1,5 @@
-export { renderCorreo, escaparHtml } from './render';
-export type { VarianteCorreo, TenantCorreo, RemitenteCorreo, FilaDato, CeldaRejilla, BloqueCorreo, OpcionesCorreo, CorreoRenderizado, } from './render';
+export { renderCorreo, escaparHtml, sanearHtmlCorreo } from './render';
+export type { VarianteCorreo, TenantCorreo, RemitenteCorreo, FilaDato, CeldaRejilla, AccionCorreo, EnlaceCorreo, PasoCorreo, BloqueCorreo, OpcionesCorreo, CorreoRenderizado, } from './render';
 export { MARCAS, APPS_DEL_PIE, NEUTROS, TONOS, FUENTES } from './marcas';
 export type { AppCorreo, MarcaCorreo, TonoCaja } from './marcas';
 export { contraste, normalizarHex, resolverAcento, CONTRASTE_MINIMO, OSCURECIDO_MAXIMO } from './color';

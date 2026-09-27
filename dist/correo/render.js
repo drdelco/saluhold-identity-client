@@ -17,8 +17,10 @@
 //
 // Todo lo que entra por `bloques`, `titulo`, `tenant`… es TEXTO: se escapa
 // siempre. La única marca admitida es `**negrita**`; los saltos de línea se
-// respetan. No hay forma de colar HTML propio, a propósito: es lo que impide
-// que el mensaje de un profesional o el asunto de un ticket rompa el correo.
+// respetan. La ÚNICA puerta para HTML es el bloque `htmlConfianza` (el cuerpo
+// con formato que escribe un profesional), y pasa por `sanearHtmlCorreo`: una
+// lista blanca corta, sin atributos salvo `a[href]` https/mailto/tel, con los
+// estilos puestos por el marco. Todo lo demás se escapa.
 //
 // JS puro, sin Firebase ni DOM: lo usan igual las Cloud Functions (CommonJS)
 // que un render de prueba en local.
@@ -49,6 +51,15 @@ function urlSegura(valor) {
 function imagenSegura(valor) {
     const s = String(valor ?? '').trim();
     return /^https?:\/\//i.test(s) ? s : null;
+}
+/** Imagen del cuerpo: https o `cid:` (adjunto en línea). Nada de data:, http ni rutas. */
+function imagenCuerpoSegura(valor) {
+    const s = String(valor ?? '').trim();
+    if (/^https:\/\/[^\s"'<>]+$/i.test(s))
+        return s;
+    if (/^cid:[^\s"'<>]+$/i.test(s))
+        return s;
+    return null;
 }
 /** Quita lo que no puede ir en un display name de cabecera From. */
 function limpiarRemitente(valor) {
@@ -94,24 +105,307 @@ ${r.detalle ? `<p style="margin:4px 0 0 0;${P_BASE}font-size:13px;line-height:1.
 function parrafo(c, texto, suave = false) {
     return `<p style="margin:0 0 16px 0;${P_BASE}font-size:15px;line-height:1.65;color:${suave ? NEUTROS.textoSuave : NEUTROS.texto};text-align:${c.ini};">${fmt(texto)}</p>`;
 }
+/**
+ * El botón en sí, a prueba de Outlook: celda con `bgcolor` (y borde en los
+ * secundarios) y el enlace dentro con su relleno. Los secundarios quitan 1 px
+ * de relleno por lado para medir lo mismo que el primario con su borde.
+ */
+function botonHtml(c, texto, url, estilo) {
+    const color = estilo === 'primario' ? '#ffffff' : estilo === 'peligro' ? TONOS.peligro.texto : c.accion;
+    const fondo = estilo === 'primario' ? c.accion : '#ffffff';
+    const borde = estilo === 'primario' ? '' : `border:1px solid ${estilo === 'peligro' ? TONOS.peligro.borde : c.accion};`;
+    const relleno = estilo === 'primario' ? '13px 26px' : '12px 25px';
+    return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" class="cx-boton"><tr>
+<td align="center" bgcolor="${fondo}" style="border-radius:8px;background-color:${fondo};${borde}">
+<a href="${escaparHtml(url)}" style="display:inline-block;padding:${relleno};${P_BASE}font-size:15px;font-weight:600;line-height:1.2;color:${color};text-decoration:none;border-radius:8px;">${escaparHtml(texto)}</a>
+</td></tr></table>`;
+}
+/** Estilo que le toca a un botón según lo que ya lleva el correo (un solo primario). */
+function estiloDe(c, secundario, tono) {
+    if (tono === 'peligro')
+        return 'peligro';
+    if (secundario || c.primarioUsado)
+        return 'secundario';
+    c.primarioUsado = true;
+    return 'primario';
+}
 function boton(c, b) {
     const url = urlSegura(b.url);
     if (!url)
         return '';
-    // Un solo botón primario por correo: los siguientes bajan a enlace.
-    const secundario = b.secundario || c.primarioUsado;
-    if (secundario) {
+    if (b.enlace) {
         const flecha = c.rtl ? '&larr;' : '&rarr;';
         return `<p style="margin:0 0 16px 0;${P_BASE}font-size:14px;line-height:1.5;text-align:${c.ini};"><a href="${escaparHtml(url)}" style="color:${c.accion};font-weight:600;text-decoration:none;">${escaparHtml(b.texto)}&nbsp;${flecha}</a></p>`;
     }
-    c.primarioUsado = true;
+    const estilo = estiloDe(c, !!b.secundario, b.tono);
+    const envoltura = `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="${c.ini}" style="margin:8px 0 18px 0;"><tr><td>${botonHtml(c, b.texto, url, estilo)}</td></tr></table>
+<div style="clear:both;font-size:0;line-height:0;">&nbsp;</div>`;
+    if (estilo !== 'primario') {
+        if (b.alternativo !== false)
+            c.alternativos.push({ texto: b.texto, url });
+        return envoltura;
+    }
     const alternativo = b.alternativo === false ? '' : `<p style="margin:0 0 20px 0;${P_BASE}font-size:12px;line-height:1.5;color:${NEUTROS.gris};text-align:${c.ini};word-break:break-all;">${escaparHtml(c.t.enlaceAlternativo)}<br>${aislarLtr(c, `<a href="${escaparHtml(url)}" style="color:${c.accion};text-decoration:underline;">${escaparHtml(url)}</a>`)}</p>`;
-    return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="${c.ini}" style="margin:8px 0 18px 0;"><tr>
-<td bgcolor="${c.accion}" style="border-radius:8px;background-color:${c.accion};">
-<a href="${escaparHtml(url)}" style="display:inline-block;padding:13px 26px;${P_BASE}font-size:15px;font-weight:600;line-height:1.2;color:#ffffff;text-decoration:none;border-radius:8px;">${escaparHtml(b.texto)}</a>
-</td></tr></table>
-<div style="clear:both;font-size:0;line-height:0;">&nbsp;</div>
+    return `${envoltura}
 ${alternativo}`;
+}
+function acciones(c, botones) {
+    const validos = (botones || [])
+        .map((b) => ({ ...b, url: urlSegura(b?.url) }))
+        .filter((b) => !!b.url && !!String(b.texto ?? '').trim());
+    if (!validos.length)
+        return '';
+    const hueco = c.rtl ? 'padding:0 0 10px 10px;' : 'padding:0 10px 10px 0;';
+    const celdas = validos.map((b) => {
+        const estilo = estiloDe(c, false, b.tono);
+        c.alternativos.push({ texto: b.texto, url: b.url });
+        return `<td class="cx-acc" valign="top" style="${hueco}">${botonHtml(c, b.texto, b.url, estilo)}</td>`;
+    }).join('');
+    // Fila en escritorio; en el móvil cada celda pasa a bloque de ancho completo
+    // (media query del <head>). Outlook de escritorio no lee media queries y se
+    // queda con la fila, que es lo que quiere a 600 px.
+    return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" align="${c.ini}" class="cx-acciones" style="margin:8px 0 10px 0;"><tr>${celdas}</tr></table>
+<div style="clear:both;font-size:0;line-height:0;">&nbsp;</div>`;
+}
+/** «Si los botones no se muestran: Confirmar · Cancelar», al final del cuerpo. */
+function lineaAlternativos(c) {
+    if (!c.alternativos.length)
+        return '';
+    const intro = c.alternativos.length > 1 ? c.t.enlacesAlternativos : c.t.enlaceAlternativoCorto;
+    const enlaces = c.alternativos
+        .map((a) => `<a href="${escaparHtml(a.url)}" style="color:${c.accion};text-decoration:underline;">${escaparHtml(a.texto)}</a>`)
+        .join(' &middot; ');
+    return `<p style="margin:18px 0 0 0;${P_BASE}font-size:12px;line-height:1.6;color:${NEUTROS.gris};text-align:${c.ini};">${escaparHtml(intro)} ${enlaces}</p>`;
+}
+function ciclo(c, b) {
+    const fechas = (b.fechas || []).map((f) => ({ texto: f?.texto, url: urlSegura(f?.url) })).filter((f) => f.url && String(f.texto ?? '').trim());
+    if (!fechas.length)
+        return '';
+    const cols = b.columnas === 3 ? 3 : 4;
+    const ancho = `${Math.floor(100 / cols)}%`;
+    const filas = [];
+    for (let i = 0; i < fechas.length; i += cols) {
+        const trozo = fechas.slice(i, i + cols);
+        const celdas = trozo.map((f) => `<td width="${ancho}" valign="top" style="padding:3px;">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr><td align="center" bgcolor="#ffffff" style="background-color:#ffffff;border:1px solid ${c.accion};border-radius:6px;">
+<a href="${escaparHtml(f.url)}" style="display:block;padding:8px 4px;${P_BASE}font-size:13px;font-weight:600;line-height:1.25;color:${c.accion};text-decoration:none;text-align:center;">${escaparHtml(f.texto)}</a>
+</td></tr></table></td>`);
+        while (celdas.length < cols)
+            celdas.push(`<td width="${ancho}" style="padding:3px;">&nbsp;</td>`);
+        filas.push(`<tr>${celdas.join('')}</tr>`);
+    }
+    const enlaces = (b.enlaces || []).map((e) => ({ texto: e?.texto, url: urlSegura(e?.url) })).filter((e) => e.url && String(e.texto ?? '').trim())
+        .map((e) => `<a href="${escaparHtml(e.url)}" style="color:${c.accion};font-weight:600;text-decoration:underline;">${escaparHtml(e.texto)}</a>`);
+    const t = TONOS.neutra;
+    return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:6px 0 22px 0;border-collapse:separate;"><tr>
+<td bgcolor="${t.fondo}" style="background-color:${t.fondo};border:1px solid ${t.borde};border-radius:8px;padding:16px 15px 14px 15px;">
+<p style="margin:0 0 4px 0;padding:0 3px;${P_BASE}font-size:15px;font-weight:600;line-height:1.4;color:${NEUTROS.texto};text-align:${c.ini};">${fmt(b.titulo)}</p>
+${b.texto ? `<p style="margin:0 0 10px 0;padding:0 3px;${P_BASE}font-size:13.5px;line-height:1.55;color:${NEUTROS.textoSuave};text-align:${c.ini};">${fmt(b.texto)}</p>` : ''}
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="table-layout:fixed;">${filas.join('')}</table>
+${enlaces.length ? `<p style="margin:10px 0 0 0;padding:0 3px;${P_BASE}font-size:13px;line-height:1.6;text-align:${c.ini};">${enlaces.join(` <span style="color:${NEUTROS.gris};">&middot;</span> `)}</p>` : ''}
+${b.nota ? `<p style="margin:8px 0 0 0;padding:0 3px;${P_BASE}font-size:12px;line-height:1.5;color:${NEUTROS.gris};text-align:${c.ini};">${fmt(b.nota)}</p>` : ''}
+</td></tr></table>`;
+}
+function imagen(b) {
+    const src = imagenCuerpoSegura(b.src);
+    if (!src)
+        return '';
+    const ancho = Math.round(Math.min(520, Math.max(16, Number(b.ancho) || 200)));
+    return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 20px 0;"><tr><td align="center" style="text-align:center;">
+<img src="${escaparHtml(src)}" alt="${escaparHtml(b.alt)}" width="${ancho}" style="display:block;margin:0 auto;width:100%;max-width:${ancho}px;height:auto;border:0;">
+${b.pie ? `<p style="margin:8px 0 0 0;${P_BASE}font-size:12px;line-height:1.5;color:${NEUTROS.gris};text-align:center;">${fmt(b.pie)}</p>` : ''}
+</td></tr></table>`;
+}
+function pasos(c, b) {
+    const items = (b.items || []).filter((p) => p && String(p.titulo ?? '').trim());
+    if (!items.length)
+        return '';
+    const titulo = b.titulo ? `<p style="margin:0 0 10px 0;${P_BASE}font-size:13px;font-weight:600;color:${NEUTROS.textoSuave};text-align:${c.ini};">${fmt(b.titulo)}</p>` : '';
+    const hueco = c.rtl ? 'padding:0 0 14px 12px;' : 'padding:0 12px 14px 0;';
+    const trs = items.map((p, i) => `<tr>
+<td width="26" valign="top" style="${hueco}"><div style="width:24px;height:24px;border:1px solid ${c.accion};border-radius:12px;${P_BASE}font-size:12px;font-weight:700;line-height:24px;color:${c.accion};text-align:center;">${i + 1}</div></td>
+<td valign="top" style="padding:2px 0 14px 0;text-align:${c.ini};"><p style="margin:0;${P_BASE}font-size:15px;font-weight:600;line-height:1.45;color:${NEUTROS.texto};">${fmt(p.titulo)}</p>${p.texto ? `<p style="margin:3px 0 0 0;${P_BASE}font-size:14px;line-height:1.55;color:${NEUTROS.textoSuave};">${fmt(p.texto)}</p>` : ''}</td>
+</tr>`).join('');
+    return `${titulo}<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:0 0 10px 0;">${trs}</table>`;
+}
+// ─── HTML de confianza (cuerpo con formato del profesional) ────────────────
+/** Etiquetas que pasan tal cual (sin atributos; `a` conserva un `href` seguro). */
+const HTML_PERMITIDO = new Set(['p', 'br', 'b', 'strong', 'i', 'em', 'u', 'ul', 'ol', 'li', 'a']);
+/**
+ * Lo que el editor de la suite (TipTap: titulares, citas, tablas, color) puede
+ * producir y no está en la lista: se reduce a la lista en vez de escaparse,
+ * para que el paciente no lea etiquetas. Bloques → párrafo; titulares →
+ * párrafo en negrita; en línea → se desenvuelve (queda el texto).
+ */
+const HTML_A_PARRAFO = new Set(['div', 'blockquote', 'pre', 'tr', 'section', 'article', 'header', 'footer']);
+const HTML_A_TITULAR = new Set(['h1', 'h2', 'h3', 'h4', 'h5', 'h6']);
+const HTML_DESENVOLVER = new Set(['span', 'font', 's', 'strike', 'del', 'ins', 'mark', 'small', 'sub', 'sup', 'code', 'table', 'thead', 'tbody', 'tfoot', 'td', 'th', 'caption', 'abbr', 'cite', 'q', 'kbd', 'var', 'time']);
+const HTML_VACIAS = new Set(['br', 'hr']);
+const ENTIDAD = /^&(?:[a-z][a-z0-9]{1,31}|#\d{1,7}|#x[0-9a-f]{1,6});/i;
+/** Texto entre etiquetas: se conservan las entidades bien formadas; lo demás se escapa. */
+function textoHtml(s) {
+    let out = '';
+    for (let i = 0; i < s.length; i++) {
+        const ch = s[i];
+        if (ch === '&') {
+            const m = ENTIDAD.exec(s.slice(i));
+            if (m) {
+                out += m[0];
+                i += m[0].length - 1;
+                continue;
+            }
+            out += '&amp;';
+        }
+        else if (ch === '<')
+            out += '&lt;';
+        else if (ch === '>')
+            out += '&gt;';
+        else if (ch === '"')
+            out += '&quot;';
+        else
+            out += ch;
+    }
+    return out;
+}
+const NOMBRADAS = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", colon: ':', tab: '\t', newline: '\n', nbsp: ' ' };
+/** Decodifica entidades (para validar un href igual que lo leerá el navegador). */
+function decodificarEntidades(s) {
+    return s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);?/gi, (m, e) => {
+        if (e[0] === '#') {
+            const n = e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
+            return Number.isFinite(n) && n > 0 && n < 0x110000 ? String.fromCodePoint(n) : '';
+        }
+        return NOMBRADAS[e.toLowerCase()] ?? m;
+    });
+}
+/** `href` de un `<a>` de confianza: solo https, mailto y tel. */
+function hrefConfianza(attrs) {
+    const m = /(?:^|\s)href\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'>]+))/i.exec(attrs);
+    if (!m)
+        return null;
+    // Sin controles ni espacios que el navegador se salta al leer el esquema.
+    const valor = decodificarEntidades(m[1] ?? m[2] ?? m[3] ?? '').replace(/[\u0000- \u007f-\u009f]/g, (ch) => (ch === ' ' ? '%20' : '')).trim();
+    return /^(https:\/\/|mailto:|tel:)/i.test(valor) ? valor : null;
+}
+const RE_ETIQUETA = /<(\/?)([a-zA-Z][a-zA-Z0-9]*)((?:\s+[^\s"'>\/=]+(?:\s*=\s*(?:"[^"]*"|'[^']*'|[^\s"'>]+))?)*)\s*(\/?)>/g;
+/**
+ * Sanea el HTML que escribe un profesional para meterlo en un correo.
+ *
+ * - Pasan `p, br, b, strong, i, em, u, ul, ol, li, a` SIN atributos (los
+ *   estilos los pone el marco); `a` conserva solo un `href` https/mailto/tel.
+ * - Titulares, `div`, `blockquote`, filas de tabla… se reducen a párrafo;
+ *   `span`, `s`, celdas y demás etiquetas de formato en línea se desenvuelven.
+ * - Cualquier otra etiqueta (script, style, iframe, img, svg, form…), un
+ *   comentario o un `<` suelto se ESCAPA: se ve como texto, no se ejecuta.
+ * - Las etiquetas se equilibran: un cierre sin apertura se ignora y lo que
+ *   quede abierto se cierra al final, para que no se coma el resto del correo.
+ */
+export function sanearHtmlCorreo(html, opciones = {}) {
+    const s = String(html ?? '');
+    const accion = opciones.accion || NEUTROS.texto;
+    const ini = opciones.rtl ? 'right' : 'left';
+    const lado = opciones.rtl ? 'padding:0 22px 0 0;' : 'padding:0 0 0 22px;';
+    const estilo = {
+        p: `margin:0 0 14px 0;${P_BASE}font-size:15px;line-height:1.65;color:${NEUTROS.texto};text-align:${ini};`,
+        ul: `margin:0 0 14px 0;${lado}${P_BASE}font-size:15px;line-height:1.55;color:${NEUTROS.texto};text-align:${ini};`,
+        ol: `margin:0 0 14px 0;${lado}${P_BASE}font-size:15px;line-height:1.55;color:${NEUTROS.texto};text-align:${ini};`,
+        li: 'margin:0 0 4px 0;',
+        a: `color:${accion};text-decoration:underline;`,
+    };
+    // `a-muerto`: un <a> cuyo href no pasa. No emite etiqueta, pero ocupa su
+    // sitio en la pila para que su </a> no cierre nada ajeno.
+    const MUERTO = 'a-muerto';
+    const pila = [];
+    let out = '';
+    let ultimo = 0;
+    const abrir = (tag, extra = '') => {
+        // Un párrafo dentro de un punto de lista no lleva margen (TipTap los mete así).
+        const css = tag === 'p' && pila.includes('li') ? `${estilo.p.replace('margin:0 0 14px 0;', 'margin:0;')}` : estilo[tag];
+        pila.push(tag);
+        out += `<${tag}${extra}${css ? ` style="${css}"` : ''}>`;
+    };
+    const cerrar = (tag) => {
+        const i = tag === 'a' ? Math.max(pila.lastIndexOf('a'), pila.lastIndexOf(MUERTO)) : pila.lastIndexOf(tag);
+        if (i < 0)
+            return; // cierre huérfano
+        while (pila.length > i) {
+            const t = pila.pop();
+            if (t !== MUERTO)
+                out += `</${t}>`;
+        }
+    };
+    RE_ETIQUETA.lastIndex = 0;
+    let m;
+    while ((m = RE_ETIQUETA.exec(s))) {
+        out += textoHtml(s.slice(ultimo, m.index));
+        ultimo = m.index + m[0].length;
+        const cierre = m[1] === '/';
+        const nombre = m[2].toLowerCase();
+        if (HTML_VACIAS.has(nombre)) {
+            if (!cierre)
+                out += '<br>';
+            continue;
+        }
+        if (HTML_PERMITIDO.has(nombre) || HTML_A_PARRAFO.has(nombre) || HTML_A_TITULAR.has(nombre)) {
+            const tag = HTML_PERMITIDO.has(nombre) ? nombre : 'p';
+            if (cierre) {
+                if (HTML_A_TITULAR.has(nombre))
+                    cerrar('strong');
+                cerrar(tag);
+                continue;
+            }
+            if (tag === 'a') {
+                if (pila.includes('a'))
+                    continue; // un enlace dentro de otro no
+                const href = hrefConfianza(m[3] || '');
+                if (!href) {
+                    pila.push(MUERTO);
+                    continue;
+                }
+                abrir('a', ` href="${escaparHtml(href)}"`);
+                continue;
+            }
+            // <p> no anida, y una lista no va dentro de un párrafo.
+            if ((tag === 'p' || tag === 'ul' || tag === 'ol') && pila[pila.length - 1] === 'p')
+                cerrar('p');
+            if (tag === 'p' && pila.includes('p') && !pila.includes('li'))
+                cerrar('p');
+            abrir(tag);
+            if (HTML_A_TITULAR.has(nombre))
+                abrir('strong');
+            continue;
+        }
+        if (HTML_DESENVOLVER.has(nombre)) {
+            if (nombre === 'td' || nombre === 'th') {
+                if (cierre)
+                    out += ' ';
+            }
+            continue;
+        }
+        // Fuera de la lista: se ve como texto.
+        out += textoHtml(m[0]);
+    }
+    out += textoHtml(s.slice(ultimo));
+    while (pila.length) {
+        const t = pila.pop();
+        if (t !== MUERTO)
+            out += `</${t}>`;
+    }
+    return out;
+}
+/** El HTML de confianza como texto plano (versión sin HTML del correo). */
+function htmlATexto(html) {
+    return decodificarEntidades(String(html ?? '')
+        .replace(/<\s*br\s*\/?>/gi, '\n')
+        .replace(/<\s*li[^>]*>/gi, '\n- ')
+        .replace(/<\/\s*(p|div|h[1-6]|li|tr|blockquote|ul|ol)\s*>/gi, '\n')
+        .replace(/<[^>]*>/g, '')).replace(/ /g, ' ').replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim();
+}
+function htmlConfianza(c, html) {
+    const limpio = sanearHtmlCorreo(html, { accion: c.accion, rtl: c.rtl });
+    if (!limpio.trim())
+        return '';
+    return `<div style="margin:0 0 6px 0;">${limpio}</div>`;
 }
 function filasDato(c, filas, dentroDeCaja = false) {
     const linea = dentroDeCaja ? 'rgba(0,0,0,0.06)' : NEUTROS.lineaTabla;
@@ -181,6 +475,11 @@ function bloqueHtml(c, b) {
         case 'separador': return separador();
         case 'firma': return firma(c, b);
         case 'nota': return nota(c, b.texto);
+        case 'acciones': return acciones(c, b.botones);
+        case 'ciclo': return ciclo(c, b);
+        case 'imagen': return imagen(b);
+        case 'htmlConfianza': return htmlConfianza(c, b.html);
+        case 'pasos': return pasos(c, b);
         default: return '';
     }
 }
@@ -243,6 +542,23 @@ function textoBloque(b, c) {
         case 'separador': return '---';
         case 'firma': return [b.despedida ? plano(b.despedida) : '', b.nombre, b.detalle ? plano(b.detalle) : ''].filter(Boolean).join('\n');
         case 'nota': return plano(b.texto);
+        case 'acciones': return (b.botones || []).map((a) => {
+            const url = urlSegura(a?.url);
+            return url ? `${plano(a.texto)}: ${url}` : '';
+        }).filter(Boolean).join('\n');
+        case 'ciclo': return [
+            plano(b.titulo),
+            b.texto ? plano(b.texto) : '',
+            ...[...(b.fechas || []), ...(b.enlaces || [])].map((f) => {
+                const url = urlSegura(f?.url);
+                return url ? `- ${plano(f.texto)}: ${url}` : '';
+            }),
+            b.nota ? plano(b.nota) : '',
+        ].filter(Boolean).join('\n');
+        case 'imagen': return imagenCuerpoSegura(b.src) ? [`[${plano(b.alt)}]`, b.pie ? plano(b.pie) : ''].filter(Boolean).join('\n') : '';
+        case 'htmlConfianza': return htmlATexto(sanearHtmlCorreo(b.html));
+        case 'pasos': return `${b.titulo ? `${plano(b.titulo)}\n` : ''}${(b.items || []).filter((p) => p && String(p.titulo ?? '').trim())
+            .map((p, n) => `${n + 1}. ${plano(p.titulo)}${p.texto ? `\n   ${plano(p.texto)}` : ''}`).join('\n')}`;
         default:
             void c;
             return '';
@@ -272,7 +588,7 @@ export function renderCorreo(o) {
     const c = {
         marca, app: o.app, variante: o.variante, t, idioma, rtl,
         ini: rtl ? 'right' : 'left', fin: rtl ? 'left' : 'right',
-        accion: acento.accion, primarioUsado: false,
+        accion: acento.accion, primarioUsado: false, alternativos: [],
     };
     // Remitente
     const remitenteB = o.variante === 'B'
@@ -305,6 +621,7 @@ export function renderCorreo(o) {
         partes.push(`<h1 style="margin:0 0 18px 0;${P_BASE}font-size:${o.variante === 'B' ? 18 : 22}px;font-weight:600;line-height:1.3;color:${NEUTROS.texto};text-align:${c.ini};">${fmt(o.titulo)}</h1>`);
     for (const b of o.bloques || [])
         partes.push(bloqueHtml(c, b));
+    partes.push(lineaAlternativos(c));
     const cuerpo = `<tr><td class="cx-pad" style="padding:${o.variante === 'B' ? '36px' : '32px'} 40px ${o.variante === 'B' ? '34px' : '30px'} 40px;text-align:${c.ini};">${partes.join('\n')}</td></tr>`;
     // Pie
     let pie = '';
@@ -349,6 +666,10 @@ a { color:${c.accion}; }
 @media only screen and (max-width:620px) {
   .cx-pad { padding-left:24px !important; padding-right:24px !important; }
   .cx-exterior { padding:16px 10px !important; }
+  .cx-acciones { width:100% !important; float:none !important; }
+  .cx-acc { display:block !important; width:100% !important; padding:0 0 10px 0 !important; box-sizing:border-box; }
+  .cx-acc .cx-boton { width:100% !important; }
+  .cx-acc .cx-boton a { display:block !important; text-align:center !important; }
 }
 </style>
 </head>

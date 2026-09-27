@@ -11,6 +11,10 @@ export interface TextosMarco {
     via: string;
     /** Debajo del botón principal. */
     enlaceAlternativo: string;
+    /** Línea común de los enlaces de los botones sin dirección debajo (varios). */
+    enlacesAlternativos: string;
+    /** La misma línea con un solo botón. */
+    enlaceAlternativoCorto: string;
     tel: string;
 }
 export declare const TEXTOS_MARCO: Record<string, TextosMarco>;

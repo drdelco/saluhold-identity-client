@@ -45,11 +45,46 @@ tokens de `MARCAS`. Tres variantes según quién firma:
 - **B**, discreto: sin cabecera ni color; el remitente como membrete.
 - **C**, predomina la suite: icono PNG y wordmark de la app, pie SaluHold.
 
-Los bloques (`parrafo`, `boton`, `tabla`, `rejilla`, `lista`, `caja`,
-`separador`, `firma`, `nota`) son texto: todo se escapa y la única marca
-admitida es `**negrita**`. El pie, el remitente y el enlace alternativo salen
-en los doce idiomas de la suite; el árabe está para el marco de derecha a
-izquierda. Pruebas: `npm test` (runner de Node, sin dependencias).
+Los bloques son texto: todo se escapa y la única marca admitida es
+`**negrita**` (más los saltos de línea). El pie, el remitente y los enlaces
+alternativos salen en los doce idiomas de la suite; el árabe está para el
+marco de derecha a izquierda. Pruebas: `npm test` (runner de Node, sin
+dependencias).
+
+| Bloque | Para qué |
+|---|---|
+| `parrafo`, `nota` | Texto normal (o `suave`) y letra pequeña |
+| `boton` | El primero del correo es el primario (relleno, con su dirección debajo); los demás, o uno con `secundario`, son botones secundarios de verdad (borde de 1 px y texto del acento, fondo blanco). `tono: 'peligro'` para cancelar; `enlace: true` lo deja en enlace de texto con flecha |
+| `acciones` | Fila de botones que se apila en el móvil: `{ botones: [{ texto, url, tono? }] }`. El primero es el primario (si el correo aún no tiene uno) |
+| `tabla`, `rejilla` | Etiqueta/valor y varias columnas (agenda) |
+| `lista`, `pasos` | Viñetas o números; `pasos` lleva título por paso: `{ items: [{ titulo, texto? }] }` |
+| `caja` | Neutra, éxito, aviso o peligro |
+| `ciclo` | Módulo menstrual del recordatorio: `{ titulo, texto?, fechas: [{ texto, url }], enlaces?, nota?, columnas?: 3 \| 4 }`; las fechas son botones pequeños en el acento del correo |
+| `imagen` | QR, firma, imagen clave: `{ src (https o cid:), alt, ancho?, pie? }`, centrada |
+| `htmlConfianza` | Cuerpo con formato que escribe un profesional. Se sanea con `sanearHtmlCorreo` (abajo) |
+| `separador`, `firma` | Raya y despedida con nombre |
+
+Los botones sin su dirección debajo (los de `acciones` y los secundarios)
+dejan su enlace en UNA línea al final del cuerpo: «Si los botones no se
+muestran: Confirmar · Cancelar · Subir documentos».
+
+`htmlConfianza` es la única puerta para HTML. Pasan `p, br, b, strong, i, em,
+u, ul, ol, li, a` sin atributos —los estilos los pone el marco— y `a` solo con
+un `href` https, mailto o tel. Lo que el editor de la suite produce además
+(titulares, citas, color, tablas) se reduce a esa lista para que el paciente
+no lea etiquetas; cualquier otra cosa (script, style, img, iframe, un
+comentario, un `<` suelto) se escapa y se ve como texto. Las etiquetas se
+equilibran: lo que quede abierto se cierra antes del bloque siguiente.
+
+### La marca del centro solo va en los planes que la incluyen
+
+`renderCorreo` pinta el logo y el color del centro **solo si el llamador se los
+pasa** en `tenant.logoUrl` / `tenant.colorPrimario`; no los busca por su
+cuenta. Las apps solo los pasan en los planes con marca propia (Clínica y
+Corporativo, los PRO). En el plan Solo la clínica es el propio médico: se pasa
+`tenant: { nombre: 'Dra. Elena Ruiz', direccion, telefono }` sin logo ni color,
+y la variante A sale con su nombre en texto sobrio arriba, el acento de la app
+y sus datos en el pie. Sin «marca» que no tiene.
 
 ## Traducir la interfaz
 

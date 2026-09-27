@@ -98,10 +98,9 @@ export const MARCAS: Record<AppCorreo, MarcaCorreo> = {
   saluHold: {
     nombre: 'SaluHold',
     wordmark: [{ texto: 'Salu', color: '#2154A0' }, { texto: 'Hold', color: '#6890d3' }],
-    // PENDIENTE DE ALOJAR: Identity (saluhold.com) solo sirve un favicon SVG.
-    // El PNG se genera del mismo dibujo (SaluHoldLogo.tsx) con las puntas en
-    // los colores vigentes de cada app y hay que subirlo a
-    // identity/admin-frontend/public/icon-192.png antes de usar esta marca.
+    // saluhold.com es el hosting de Identity (identity-44874). El PNG es el
+    // trébol de SaluHoldLogo.tsx con las puntas en los colores vigentes de
+    // SaluFirst, SaluFile y SaluFact; vive en identity/admin-frontend/public.
     iconoUrl: 'https://saluhold.com/icon-192.png',
     web: 'https://saluhold.com',
     acento: '#2154A0',
