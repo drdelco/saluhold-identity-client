@@ -96,7 +96,7 @@ const LOGO_C_ALTO = 40;
 const LOGO_C_ANCHO = 180;
 /**
  * Medidas del logo del centro en C: con las naturales, `width`/`height`
- * exactos dentro de 180×40; sin ellas, solo el alto (el cliente escala).
+ * exactos dentro de 180×40; sin ellas, `height` para Outlook y topes CSS.
  */
 function medidasLogoC(tenant) {
     const w0 = Number(tenant.logoAncho);
@@ -120,7 +120,9 @@ ${marcaApp(m)}
     const dims = w ? `width="${w}" height="${h}"` : `height="${h}"`;
     const estilo = w
         ? `width:${w}px;height:${h}px;`
-        : `height:${h}px;width:auto;max-width:${LOGO_C_ANCHO}px;`;
+        // Sin medidas: el atributo `height` para Outlook y, en el resto, topes que
+        // conservan la proporción (un logo apaisado no se deforma ni uno pequeño crece).
+        : `max-height:${h}px;max-width:${LOGO_C_ANCHO}px;width:auto;height:auto;`;
     const hueco = c.rtl ? 'padding:0 20px 0 0;' : 'padding:0 0 0 20px;';
     return `<tr><td class="cx-pad" bgcolor="#ffffff" style="padding:22px 40px 20px 40px;background-color:#ffffff;border-bottom:1px solid ${marcas_1.NEUTROS.lineaTabla};">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>

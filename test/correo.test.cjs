@@ -96,7 +96,7 @@ test('C con tenant y logo: marca de la app a la izquierda, logo del centro a la 
   const iLogo = html.indexOf(`src="${TENANT.logoUrl}"`);
   assert.ok(iApp > 0 && iLogo > iApp, 'la app primero (inicio de lectura), el logo después');
   assert.ok(/<td valign="middle" align="right"[^>]*><img src="https:\/\/logos\.ejemplo\.es\/olivar\.png" height="40"/.test(html), 'logo en la celda derecha, 40 px de alto');
-  assert.ok(html.includes('max-width:180px'));
+  assert.ok(html.includes('max-height:40px;max-width:180px;width:auto;height:auto;'), 'sin medidas: topes que conservan la proporción');
   assert.ok(html.includes(`alt="${TENANT.nombre}"`));
   assert.ok(!html.includes('max-height:56px'), 'no es la cabecera de A');
   // Sigue mandando la app: su acento, su filete, su remitente, su pie; ni color ni datos del centro.

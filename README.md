@@ -47,7 +47,7 @@ tokens de `MARCAS`. Tres variantes según quién firma:
   Admite `tenant` opcional para el centro desde el que se escribe
   (invitaciones de personal, recordatorios, alta de médico en un centro):
   con `logoUrl`, el logo del centro va a la derecha de la cabecera (40 px de
-  alto como máximo, 180 de ancho; con `logoAncho`/`logoAlto` se fijan
+  alto como máximo, 180 de ancho, sin deformarse; con `logoAncho`/`logoAlto` se fijan
   `width`/`height` exactos, que Outlook ignora `max-height`), y la app sigue
   a la izquierda; sin logo, `tenant.nombre` sale en una línea gris bajo el
   título, salvo que el llamador lo ponga en `antetitulo` (entonces no se
