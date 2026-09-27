@@ -89,6 +89,82 @@ test('A sin tenant cae a la cabecera de la app (no rompe)', () => {
   assert.equal(fromName, 'SaluFile');
 });
 
+test('C con tenant y logo: marca de la app a la izquierda, logo del centro a la derecha (≤ 40 px), acento y pie de la app', () => {
+  const { html, text, fromName, meta } = renderCorreo(base({ app: 'saluFirst', tenant: TENANT }));
+  const m = MARCAS.saluFirst;
+  const iApp = html.indexOf(`src="${m.iconoUrl}" width="32"`);
+  const iLogo = html.indexOf(`src="${TENANT.logoUrl}"`);
+  assert.ok(iApp > 0 && iLogo > iApp, 'la app primero (inicio de lectura), el logo después');
+  assert.ok(/<td valign="middle" align="right"[^>]*><img src="https:\/\/logos\.ejemplo\.es\/olivar\.png" height="40"/.test(html), 'logo en la celda derecha, 40 px de alto');
+  assert.ok(html.includes('max-width:180px'));
+  assert.ok(html.includes(`alt="${TENANT.nombre}"`));
+  assert.ok(!html.includes('max-height:56px'), 'no es la cabecera de A');
+  // Sigue mandando la app: su acento, su filete, su remitente, su pie; ni color ni datos del centro.
+  assert.ok(html.includes(`border-top:3px solid ${m.acento}`));
+  assert.ok(html.includes(`background-color:${m.accion}`));
+  assert.ok(!html.includes(TENANT.colorPrimario));
+  assert.ok(!html.includes(TENANT.direccion));
+  assert.ok(html.includes('SaluHold'));
+  assert.equal(fromName, 'SaluFirst');
+  assert.equal(meta.acento.origen, 'app');
+  // Con logo, el nombre no se repite en gris bajo el título.
+  assert.equal(html.split('Clínica Olivar').length - 1, 1, 'el nombre solo en el alt');
+  assert.ok(text.startsWith('SaluFirst · Clínica Olivar\n'));
+});
+
+test('C con tenant y medidas del logo: width/height exactos dentro de 180×40', () => {
+  const ancho = renderCorreo(base({ tenant: { ...TENANT, logoAncho: 600, logoAlto: 100 } })).html;
+  assert.ok(ancho.includes('width="180" height="30"'), 'logo apaisado: manda el ancho');
+  const alto = renderCorreo(base({ tenant: { ...TENANT, logoAncho: 200, logoAlto: 200 } })).html;
+  assert.ok(alto.includes('width="40" height="40"'), 'logo cuadrado: manda el alto');
+  const chico = renderCorreo(base({ tenant: { ...TENANT, logoAncho: 30, logoAlto: 20 } })).html;
+  assert.ok(chico.includes('width="30" height="20"'), 'no se agranda');
+});
+
+test('C con tenant sin logo: el nombre en una línea gris bajo el título; si va en el antetítulo, no se repite', () => {
+  const t = { nombre: 'Centro Médico Norte' };
+  const { html, text } = renderCorreo(base({ tenant: t }));
+  assert.ok(html.includes(`color:${NEUTROS.gris};text-align:left;">Centro Médico Norte</p>`));
+  assert.ok(!html.includes('<img src="https://logos'), 'sin logo');
+  assert.ok(html.includes(`src="${MARCAS.saluFile.iconoUrl}" width="32"`), 'cabecera normal de la app');
+  assert.ok(text.includes('Título\nCentro Médico Norte'));
+  const ante = renderCorreo(base({ tenant: t, antetitulo: 'Centro Médico Norte' })).html;
+  assert.equal(ante.split('Centro Médico Norte').length - 1, 1, 'solo en el antetítulo');
+  // Un logo que no es https no cuenta como logo: cae al nombre en gris.
+  const malo = renderCorreo(base({ tenant: { nombre: 'X', logoUrl: 'javascript:alert(1)' } })).html;
+  assert.ok(!malo.includes('javascript:'));
+  assert.ok(malo.includes('text-align:left;">X</p>'));
+});
+
+test('C con tenant: escapa nombre y logo', () => {
+  const t = { nombre: '<script>alert(1)</script> & "Co"', logoUrl: 'https://l.es/a.png?x="><img onerror=1>' };
+  const conLogo = renderCorreo(base({ tenant: t }));
+  assert.ok(!conLogo.html.includes('<script>alert'));
+  assert.ok(!conLogo.html.includes('"><img onerror'));
+  assert.ok(conLogo.html.includes('alt="&lt;script&gt;alert(1)&lt;/script&gt; &amp; &quot;Co&quot;"'));
+  const sinLogo = renderCorreo(base({ tenant: { nombre: t.nombre } })).html;
+  assert.ok(!sinLogo.includes('<script>alert'));
+  assert.ok(sinLogo.includes('&lt;script&gt;alert(1)&lt;/script&gt; &amp; &quot;Co&quot;</p>'));
+});
+
+test('C con tenant en árabe: la app a la derecha (inicio) y el logo a la izquierda, con el hueco del lado contrario', () => {
+  const { html, meta } = renderCorreo(base({ idioma: 'ar', tenant: TENANT }));
+  assert.equal(meta.dir, 'rtl');
+  assert.ok(html.includes('<td valign="middle" align="right" style="text-align:right;"><table role="presentation" cellpadding="0" cellspacing="0" border="0" dir="ltr">'), 'marca de la app al inicio (derecha)');
+  assert.ok(html.includes('<td valign="middle" align="left" style="padding:0 20px 0 0;text-align:left;"><img'), 'logo al final (izquierda)');
+  const sinLogo = renderCorreo(base({ idioma: 'ar', tenant: { nombre: 'مركز' } })).html;
+  assert.ok(sinLogo.includes('text-align:right;">مركز</p>'));
+});
+
+test('A y B no cambian con el soporte de tenant en C', () => {
+  const a = renderCorreo(base({ variante: 'A', tenant: TENANT })).html;
+  assert.ok(a.includes('max-height:56px') && !a.includes('max-width:180px'));
+  const b = renderCorreo(base({ variante: 'B', tenant: TENANT })).html;
+  assert.ok(!b.includes('<img src="https://logos'));
+  const cSin = renderCorreo(base()).html;
+  assert.ok(!cSin.includes('max-width:180px'));
+});
+
 test('B: sin cabecera, sin imágenes ni color; membrete del remitente y «Enviado mediante» fuera de la tarjeta', () => {
   const { html, fromName } = renderCorreo(base({ variante: 'B', remitente: { nombre: 'Dra. Elena Ruiz', detalle: 'Ginecología' }, tenant: TENANT }));
   assert.ok(!/<img\b/.test(html), 'ninguna imagen');

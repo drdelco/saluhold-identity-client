@@ -44,6 +44,16 @@ tokens de `MARCAS`. Tres variantes según quién firma:
   pie y «Enviado con {App}».
 - **B**, discreto: sin cabecera ni color; el remitente como membrete.
 - **C**, predomina la suite: icono PNG y wordmark de la app, pie SaluHold.
+  Admite `tenant` opcional para el centro desde el que se escribe
+  (invitaciones de personal, recordatorios, alta de médico en un centro):
+  con `logoUrl`, el logo del centro va a la derecha de la cabecera (40 px de
+  alto como máximo, 180 de ancho; con `logoAncho`/`logoAlto` se fijan
+  `width`/`height` exactos, que Outlook ignora `max-height`), y la app sigue
+  a la izquierda; sin logo, `tenant.nombre` sale en una línea gris bajo el
+  título, salvo que el llamador lo ponga en `antetitulo` (entonces no se
+  repite). Acento, filete, remitente y pie siguen siendo los de la app; el
+  color y los datos del centro no se usan en C. En árabe, espejo: la app a la
+  derecha y el logo a la izquierda.
 
 Los bloques son texto: todo se escapa y la única marca admitida es
 `**negrita**` (más los saltos de línea). El pie, el remitente y los enlaces
@@ -84,7 +94,8 @@ cuenta. Las apps solo los pasan en los planes con marca propia (Clínica y
 Corporativo, los PRO). En el plan Solo la clínica es el propio médico: se pasa
 `tenant: { nombre: 'Dra. Elena Ruiz', direccion, telefono }` sin logo ni color,
 y la variante A sale con su nombre en texto sobrio arriba, el acento de la app
-y sus datos en el pie. Sin «marca» que no tiene.
+y sus datos en el pie. Sin «marca» que no tiene. Lo mismo en C: en Solo, el
+nombre en gris bajo el título; en PRO, el logo en la cabecera.
 
 ## Traducir la interfaz
 

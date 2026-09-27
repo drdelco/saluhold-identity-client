@@ -65,6 +65,11 @@ function imagenCuerpoSegura(valor) {
 function limpiarRemitente(valor) {
     return valor.replace(/[<>"\r\n\\]/g, '').replace(/\s+/g, ' ').trim();
 }
+/** Misma cadena salvo mayúsculas, espacios y `**`. */
+function mismoTexto(a, b) {
+    const n = (v) => plano(v).replace(/\s+/g, ' ').trim().toLocaleLowerCase();
+    return !!a && n(a) === n(b);
+}
 const conMarca = (plantilla, clave, html) => plantilla.replace(clave, html);
 /** Teléfonos, correos y URLs dentro de un texto RTL: aislados para que no se inviertan. */
 function aislarLtr(c, html) {
@@ -76,12 +81,47 @@ function wordmarkHtml(m, tam) {
     const [a, b] = m.wordmark;
     return `<span style="font-family:${FUENTES.marca};font-size:${tam}px;font-weight:800;letter-spacing:-0.3px;line-height:1;white-space:nowrap;"><span style="color:${a.color};">${escaparHtml(a.texto)}</span><span style="color:${b.color};">${escaparHtml(b.texto)}</span></span>`;
 }
-function cabeceraApp(c) {
-    const m = c.marca;
-    return `<tr><td class="cx-pad" align="${c.ini}" style="padding:26px 40px 22px 40px;border-bottom:1px solid ${NEUTROS.lineaTabla};">
-<table role="presentation" cellpadding="0" cellspacing="0" border="0" dir="ltr"><tr>
+function marcaApp(m) {
+    return `<table role="presentation" cellpadding="0" cellspacing="0" border="0" dir="ltr"><tr>
 <td valign="middle" style="padding:0 11px 0 0;"><img src="${escaparHtml(m.iconoUrl)}" width="32" height="32" alt="" style="display:block;width:32px;height:32px;border:0;border-radius:8px;"></td>
 <td valign="middle">${wordmarkHtml(m, 21)}</td>
+</tr></table>`;
+}
+/** Alto y ancho máximos del logo del centro en la cabecera de C. */
+const LOGO_C_ALTO = 40;
+const LOGO_C_ANCHO = 180;
+/**
+ * Medidas del logo del centro en C: con las naturales, `width`/`height`
+ * exactos dentro de 180×40; sin ellas, solo el alto (el cliente escala).
+ */
+function medidasLogoC(tenant) {
+    const w0 = Number(tenant.logoAncho);
+    const h0 = Number(tenant.logoAlto);
+    if (!(w0 > 0 && h0 > 0))
+        return { w: null, h: LOGO_C_ALTO };
+    const escala = Math.min(LOGO_C_ALTO / h0, LOGO_C_ANCHO / w0, 1);
+    return { w: Math.max(1, Math.round(w0 * escala)), h: Math.max(1, Math.round(h0 * escala)) };
+}
+function cabeceraApp(c, tenant = null) {
+    const m = c.marca;
+    const logo = tenant ? imagenSegura(tenant.logoUrl) : null;
+    if (!logo || !tenant) {
+        return `<tr><td class="cx-pad" align="${c.ini}" style="padding:26px 40px 22px 40px;border-bottom:1px solid ${NEUTROS.lineaTabla};">
+${marcaApp(m)}
+</td></tr>`;
+    }
+    // La app a un lado (el de inicio de lectura) y el logo del centro al otro,
+    // más bajo que la marca de la app para que esta siga mandando.
+    const { w, h } = medidasLogoC(tenant);
+    const dims = w ? `width="${w}" height="${h}"` : `height="${h}"`;
+    const estilo = w
+        ? `width:${w}px;height:${h}px;`
+        : `height:${h}px;width:auto;max-width:${LOGO_C_ANCHO}px;`;
+    const hueco = c.rtl ? 'padding:0 20px 0 0;' : 'padding:0 0 0 20px;';
+    return `<tr><td class="cx-pad" bgcolor="#ffffff" style="padding:22px 40px 20px 40px;background-color:#ffffff;border-bottom:1px solid ${NEUTROS.lineaTabla};">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>
+<td valign="middle" align="${c.ini}" style="text-align:${c.ini};">${marcaApp(m)}</td>
+<td valign="middle" align="${c.fin}" style="${hueco}text-align:${c.fin};"><img src="${escaparHtml(logo)}" ${dims} alt="${escaparHtml(tenant.nombre)}" style="display:inline-block;${estilo}border:0;"></td>
 </tr></table>
 </td></tr>`;
 }
@@ -604,7 +644,11 @@ export function renderCorreo(o) {
     fromName = limpiarRemitente(fromName) || marca.nombre;
     // Cabecera
     let cabecera = '';
-    if (o.variante === 'C' || (o.variante === 'A' && !tenant))
+    const tenantC = o.variante === 'C' ? tenant : null;
+    const logoC = tenantC ? imagenSegura(tenantC.logoUrl) : null;
+    if (o.variante === 'C')
+        cabecera = cabeceraApp(c, tenantC);
+    else if (o.variante === 'A' && !tenant)
         cabecera = cabeceraApp(c);
     else if (o.variante === 'A' && tenant)
         cabecera = cabeceraTenant(c, tenant);
@@ -617,8 +661,13 @@ export function renderCorreo(o) {
     const versalitas = rtl ? 'font-size:13px;' : 'font-size:11px;letter-spacing:1px;text-transform:uppercase;';
     if (o.antetitulo)
         partes.push(`<p style="margin:0 0 8px 0;${P_BASE}${versalitas}font-weight:700;line-height:1.4;color:${c.accion};text-align:${c.ini};">${fmt(o.antetitulo)}</p>`);
+    // C con centro y sin logo: su nombre en gris bajo el título, salvo que el
+    // llamador ya lo haya puesto como antetítulo.
+    const nombreCentroC = tenantC && !logoC && !mismoTexto(o.antetitulo, tenantC.nombre) ? tenantC.nombre : null;
     if (o.titulo)
-        partes.push(`<h1 style="margin:0 0 18px 0;${P_BASE}font-size:${o.variante === 'B' ? 18 : 22}px;font-weight:600;line-height:1.3;color:${NEUTROS.texto};text-align:${c.ini};">${fmt(o.titulo)}</h1>`);
+        partes.push(`<h1 style="margin:0 0 ${nombreCentroC ? 6 : 18}px 0;${P_BASE}font-size:${o.variante === 'B' ? 18 : 22}px;font-weight:600;line-height:1.3;color:${NEUTROS.texto};text-align:${c.ini};">${fmt(o.titulo)}</h1>`);
+    if (nombreCentroC)
+        partes.push(`<p style="margin:0 0 20px 0;${P_BASE}font-size:14px;line-height:1.5;color:${NEUTROS.gris};text-align:${c.ini};">${escaparHtml(nombreCentroC)}</p>`);
     for (const b of o.bloques || [])
         partes.push(bloqueHtml(c, b));
     partes.push(lineaAlternativos(c));
@@ -695,12 +744,16 @@ ${fuera}
         txt.push(remitenteB.nombre + (remitenteB.detalle ? `\n${remitenteB.detalle}` : ''), '');
     else if (o.variante === 'A' && tenant)
         txt.push(tenant.nombre, '');
+    else if (tenantC && logoC)
+        txt.push(`${marca.nombre} · ${tenantC.nombre}`, '');
     else
         txt.push(marca.nombre, '');
     if (o.antetitulo)
         txt.push(plano(o.antetitulo).toUpperCase());
     if (o.titulo)
-        txt.push(plano(o.titulo), '');
+        txt.push(plano(o.titulo), ...(nombreCentroC ? [nombreCentroC] : []), '');
+    else if (nombreCentroC)
+        txt.push(nombreCentroC, '');
     for (const b of o.bloques || []) {
         const s = textoBloque(b, c);
         if (s)

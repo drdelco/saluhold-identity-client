@@ -3,8 +3,14 @@ import { type AcentoResuelto } from './color';
 export type VarianteCorreo = 'A' | 'B' | 'C';
 export interface TenantCorreo {
     nombre: string;
-    /** PNG/JPG por https. Se pinta a 56 px de alto como máximo. */
+    /**
+     * PNG/JPG por https. En A, centrado arriba (56 px de alto como máximo); en C,
+     * a la derecha de la marca de la app (40 px como máximo).
+     */
     logoUrl?: string | null;
+    /** Medidas naturales del logo (px), si se conocen: fijan `width`/`height` exactos (Outlook ignora `max-height`). */
+    logoAncho?: number | null;
+    logoAlto?: number | null;
     /** Color del centro (`#rrggbb`). Si no llega a 4,5:1 sobre blanco se oscurece o se cae al de la app. */
     colorPrimario?: string | null;
     direccion?: string | null;
@@ -151,6 +157,14 @@ export interface OpcionesCorreo {
     variante: VarianteCorreo;
     /** Idioma del destinatario (dos letras). Pie, remitente y enlace alternativo salen en él. */
     idioma?: string | null;
+    /**
+     * A: el centro firma el correo (cabecera, color, pie).
+     * B: membrete por defecto.
+     * C: el centro desde el que se escribe, sin quitarle el protagonismo a la
+     *    app: con `logoUrl`, su logo a la derecha de la cabecera; sin logo, su
+     *    `nombre` en una línea gris bajo el título (o en el antetítulo, si el
+     *    llamador lo pone ahí: entonces no se repite). Acento y pie, de la app.
+     */
     tenant?: TenantCorreo | null;
     /** Solo variante B: quién firma (por defecto, el tenant). */
     remitente?: RemitenteCorreo | null;
