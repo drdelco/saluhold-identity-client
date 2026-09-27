@@ -27,9 +27,29 @@ Con un solo sitio donde vive cada regla no hay convenio que traducir mal.
 | `@saluhold/identity-client` | Codec del sexo, validación de DNI/NIE, cliente del servidor local | Navegador y servidor |
 | `@saluhold/identity-client/ui` | Componentes React + Mantine: escáner de documentos, formulario de alta | Solo navegador |
 | `@saluhold/identity-client/servidor` | Reglas que tocan Firestore con el Admin SDK | Solo Cloud Functions |
+| `@saluhold/identity-client/correo` | `renderCorreo` y los tokens de marca de los correos de la suite | Navegador y servidor |
 
 El núcleo no importa nada: ni React, ni Firebase. Quien solo necesite el codec
 del sexo no paga por el resto.
+
+## Correos
+
+`renderCorreo({ app, variante, idioma, tenant, remitente, preheader, titulo,
+antetitulo, bloques, pieAviso })` devuelve `{ html, text, fromName }`: el marco
+completo de un correo (tarjeta de 600 px, tablas, estilos en línea) con los
+tokens de `MARCAS`. Tres variantes según quién firma:
+
+- **A**, predomina el centro: su logo (o su nombre) arriba, su color si llega a
+  4,5:1 sobre blanco (si no, se oscurece o se usa el de la app), sus datos en el
+  pie y «Enviado con {App}».
+- **B**, discreto: sin cabecera ni color; el remitente como membrete.
+- **C**, predomina la suite: icono PNG y wordmark de la app, pie SaluHold.
+
+Los bloques (`parrafo`, `boton`, `tabla`, `rejilla`, `lista`, `caja`,
+`separador`, `firma`, `nota`) son texto: todo se escapa y la única marca
+admitida es `**negrita**`. El pie, el remitente y el enlace alternativo salen
+en los doce idiomas de la suite; el árabe está para el marco de derecha a
+izquierda. Pruebas: `npm test` (runner de Node, sin dependencias).
 
 ## Traducir la interfaz
 

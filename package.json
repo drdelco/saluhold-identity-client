@@ -19,6 +19,11 @@
       "types": "./dist/servidor/index.d.ts",
       "import": "./dist/servidor/index.js",
       "require": "./dist-cjs/servidor/index.js"
+    },
+    "./correo": {
+      "types": "./dist/correo/index.d.ts",
+      "import": "./dist/correo/index.js",
+      "require": "./dist-cjs/correo/index.js"
     }
   },
   "typesVersions": {
@@ -28,13 +33,17 @@
       ],
       "servidor": [
         "dist/servidor/index.d.ts"
+      ],
+      "correo": [
+        "dist/correo/index.d.ts"
       ]
     }
   },
   "scripts": {
     "build": "tsc && tsc -p tsconfig.cjs.json && node scripts/marcar-modulos.cjs",
     "watch": "tsc --watch",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "test": "npm run build && node --test \"test/*.test.cjs\""
   },
   "files": [
     "dist",
