@@ -4,9 +4,10 @@
 // JS puro (sin Firebase, sin DOM, sin dependencias): lo importan igual las
 // Cloud Functions por la subruta CommonJS que un script de render en local.
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.esRtl = exports.idiomaDelMarco = exports.IDIOMAS_SUITE = exports.TEXTOS_MARCO = exports.OSCURECIDO_MAXIMO = exports.CONTRASTE_MINIMO = exports.resolverAcento = exports.normalizarHex = exports.contraste = exports.FUENTES = exports.TONOS = exports.NEUTROS = exports.APPS_DEL_PIE = exports.MARCAS = exports.sanearHtmlCorreo = exports.escaparHtml = exports.renderCorreo = void 0;
+exports.esRtl = exports.idiomaDelMarco = exports.IDIOMAS_SUITE = exports.TEXTOS_MARCO = exports.OSCURECIDO_MAXIMO = exports.CONTRASTE_MINIMO = exports.resolverAcento = exports.normalizarHex = exports.contraste = exports.FUENTES = exports.TONOS = exports.NEUTROS = exports.APPS_DEL_PIE = exports.MARCAS = exports.sanearHtmlCorreo = exports.escaparHtml = exports.remitenteDelCentro = exports.renderCorreo = void 0;
 var render_1 = require("./render");
 Object.defineProperty(exports, "renderCorreo", { enumerable: true, get: function () { return render_1.renderCorreo; } });
+Object.defineProperty(exports, "remitenteDelCentro", { enumerable: true, get: function () { return render_1.remitenteDelCentro; } });
 Object.defineProperty(exports, "escaparHtml", { enumerable: true, get: function () { return render_1.escaparHtml; } });
 Object.defineProperty(exports, "sanearHtmlCorreo", { enumerable: true, get: function () { return render_1.sanearHtmlCorreo; } });
 var marcas_1 = require("./marcas");

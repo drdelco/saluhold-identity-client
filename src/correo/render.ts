@@ -210,6 +210,22 @@ function limpiarRemitente(valor: string): string {
   return valor.replace(/[<>"\r\n\\]/g, '').replace(/\s+/g, ' ').trim();
 }
 
+/**
+ * «Centro (vía App)», con el «vía» en el idioma del correo: el remitente de la
+ * variante A y, por decisión de Diego (2026-09-28), también el de las
+ * invitaciones de personal de un centro (variante C), en cualquier plan. Sin
+ * nombre de centro devuelve el nombre de la app. Sin `<>"` ni saltos: va tal
+ * cual en la cabecera `From`.
+ */
+export function remitenteDelCentro(app: AppCorreo, nombreCentro: string | null | undefined, idioma?: string | null): string {
+  const marca = MARCAS[app];
+  if (!marca) throw new Error(`remitenteDelCentro: app desconocida «${String(app)}»`);
+  const nombre = limpiarRemitente(String(nombreCentro ?? ''));
+  if (!nombre) return marca.nombre;
+  const t = TEXTOS_MARCO[idiomaDelMarco(idioma)];
+  return limpiarRemitente(`${nombre} (${t.via} ${marca.nombre})`) || marca.nombre;
+}
+
 /** Misma cadena salvo mayúsculas, espacios y `**`. */
 function mismoTexto(a: unknown, b: unknown): boolean {
   const n = (v: unknown) => plano(v).replace(/\s+/g, ' ').trim().toLocaleLowerCase();
@@ -808,7 +824,7 @@ export function renderCorreo(o: OpcionesCorreo): CorreoRenderizado {
     ? (o.remitente?.nombre?.trim() ? o.remitente : tenant ? { nombre: tenant.nombre } : null)
     : null;
   let fromName: string;
-  if (o.variante === 'A' && tenant) fromName = `${tenant.nombre} (${t.via} ${marca.nombre})`;
+  if (o.variante === 'A' && tenant) fromName = remitenteDelCentro(o.app, tenant.nombre, idioma);
   else if (o.variante === 'B' && remitenteB) fromName = remitenteB.nombre;
   else fromName = marca.nombre;
   fromName = limpiarRemitente(fromName) || marca.nombre;

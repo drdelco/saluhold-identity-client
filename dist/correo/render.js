@@ -65,6 +65,23 @@ function imagenCuerpoSegura(valor) {
 function limpiarRemitente(valor) {
     return valor.replace(/[<>"\r\n\\]/g, '').replace(/\s+/g, ' ').trim();
 }
+/**
+ * «Centro (vía App)», con el «vía» en el idioma del correo: el remitente de la
+ * variante A y, por decisión de Diego (2026-09-28), también el de las
+ * invitaciones de personal de un centro (variante C), en cualquier plan. Sin
+ * nombre de centro devuelve el nombre de la app. Sin `<>"` ni saltos: va tal
+ * cual en la cabecera `From`.
+ */
+export function remitenteDelCentro(app, nombreCentro, idioma) {
+    const marca = MARCAS[app];
+    if (!marca)
+        throw new Error(`remitenteDelCentro: app desconocida «${String(app)}»`);
+    const nombre = limpiarRemitente(String(nombreCentro ?? ''));
+    if (!nombre)
+        return marca.nombre;
+    const t = TEXTOS_MARCO[idiomaDelMarco(idioma)];
+    return limpiarRemitente(`${nombre} (${t.via} ${marca.nombre})`) || marca.nombre;
+}
 /** Misma cadena salvo mayúsculas, espacios y `**`. */
 function mismoTexto(a, b) {
     const n = (v) => plano(v).replace(/\s+/g, ' ').trim().toLocaleLowerCase();
@@ -638,7 +655,7 @@ export function renderCorreo(o) {
         : null;
     let fromName;
     if (o.variante === 'A' && tenant)
-        fromName = `${tenant.nombre} (${t.via} ${marca.nombre})`;
+        fromName = remitenteDelCentro(o.app, tenant.nombre, idioma);
     else if (o.variante === 'B' && remitenteB)
         fromName = remitenteB.nombre;
     else

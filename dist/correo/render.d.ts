@@ -190,6 +190,14 @@ export interface CorreoRenderizado {
 /** Escapa texto para HTML (contenido y atributos). */
 export declare function escaparHtml(valor: unknown): string;
 /**
+ * «Centro (vía App)», con el «vía» en el idioma del correo: el remitente de la
+ * variante A y, por decisión de Diego (2026-09-28), también el de las
+ * invitaciones de personal de un centro (variante C), en cualquier plan. Sin
+ * nombre de centro devuelve el nombre de la app. Sin `<>"` ni saltos: va tal
+ * cual en la cabecera `From`.
+ */
+export declare function remitenteDelCentro(app: AppCorreo, nombreCentro: string | null | undefined, idioma?: string | null): string;
+/**
  * Sanea el HTML que escribe un profesional para meterlo en un correo.
  *
  * - Pasan `p, br, b, strong, i, em, u, ul, ol, li, a` SIN atributos (los

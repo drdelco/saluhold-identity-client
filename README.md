@@ -55,6 +55,13 @@ tokens de `MARCAS`. Tres variantes según quién firma:
   color y los datos del centro no se usan en C. En árabe, espejo: la app a la
   derecha y el logo a la izquierda.
 
+`remitenteDelCentro(app, nombreCentro, idioma)` devuelve «Centro (vía App)»
+con el «vía» traducido (sin nombre, el de la app): es el `fromName` de la
+variante A y el que usan las apps para las invitaciones de personal de un
+centro (C), en cualquier plan (decisión de Diego, 2026-09-28). `renderCorreo`
+no lo aplica solo en C: el llamador decide (el reset de Identity, por ejemplo,
+sale como la app).
+
 Los bloques son texto: todo se escapa y la única marca admitida es
 `**negrita**` (más los saltos de línea). El pie, el remitente y los enlaces
 alternativos salen en los doce idiomas de la suite; el árabe está para el

@@ -7,7 +7,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
-  renderCorreo, sanearHtmlCorreo, MARCAS, TONOS, NEUTROS, TEXTOS_MARCO, IDIOMAS_SUITE, contraste, resolverAcento,
+  renderCorreo, remitenteDelCentro, sanearHtmlCorreo, MARCAS, TONOS, NEUTROS, TEXTOS_MARCO, IDIOMAS_SUITE, contraste, resolverAcento,
 } = require('../dist-cjs/correo');
 
 const TENANT = {
@@ -552,4 +552,15 @@ test('tamaño: < 100 KB incluso con una agenda de 60 citas (Gmail recorta a 102 
   assert.ok(kb < 100, `${kb.toFixed(1)} KB`);
   const normal = new TextEncoder().encode(renderCorreo(base({ variante: 'C' })).html).length / 1024;
   assert.ok(normal < 30, `correo normal ${normal.toFixed(1)} KB`);
+});
+
+test('remitenteDelCentro: «Centro (vía App)» traducido, limpio y con caída a la app', () => {
+  assert.equal(remitenteDelCentro('saluFirst', 'NG Clínicas', 'es'), 'NG Clínicas (vía SaluFirst)');
+  assert.equal(remitenteDelCentro('saluFile', 'NG Clínicas', 'de'), 'NG Clínicas (über SaluFile)');
+  assert.equal(remitenteDelCentro('saluFact', 'NG Clínicas', 'xx'), 'NG Clínicas (vía SaluFact)');
+  assert.equal(remitenteDelCentro('saluFile', ' A <b>"x"\n ', 'es'), 'A bx (vía SaluFile)');
+  assert.equal(remitenteDelCentro('saluFirst', '  ', 'es'), 'SaluFirst');
+  assert.equal(remitenteDelCentro('saluFirst', null, 'es'), 'SaluFirst');
+  // La variante A sigue saliendo por el mismo helper.
+  assert.equal(renderCorreo(base({ variante: 'A', tenant: TENANT, idioma: 'it' })).fromName, remitenteDelCentro('saluFile', TENANT.nombre, 'it'));
 });

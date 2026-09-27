@@ -26,7 +26,7 @@
 // JS puro, sin Firebase ni DOM: lo usan igual las Cloud Functions (CommonJS)
 // que un render de prueba en local.
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.renderCorreo = exports.sanearHtmlCorreo = exports.escaparHtml = void 0;
+exports.renderCorreo = exports.sanearHtmlCorreo = exports.remitenteDelCentro = exports.escaparHtml = void 0;
 const marcas_1 = require("./marcas");
 const color_1 = require("./color");
 const textos_1 = require("./textos");
@@ -69,6 +69,24 @@ function imagenCuerpoSegura(valor) {
 function limpiarRemitente(valor) {
     return valor.replace(/[<>"\r\n\\]/g, '').replace(/\s+/g, ' ').trim();
 }
+/**
+ * «Centro (vía App)», con el «vía» en el idioma del correo: el remitente de la
+ * variante A y, por decisión de Diego (2026-09-28), también el de las
+ * invitaciones de personal de un centro (variante C), en cualquier plan. Sin
+ * nombre de centro devuelve el nombre de la app. Sin `<>"` ni saltos: va tal
+ * cual en la cabecera `From`.
+ */
+function remitenteDelCentro(app, nombreCentro, idioma) {
+    const marca = marcas_1.MARCAS[app];
+    if (!marca)
+        throw new Error(`remitenteDelCentro: app desconocida «${String(app)}»`);
+    const nombre = limpiarRemitente(String(nombreCentro ?? ''));
+    if (!nombre)
+        return marca.nombre;
+    const t = textos_1.TEXTOS_MARCO[(0, textos_1.idiomaDelMarco)(idioma)];
+    return limpiarRemitente(`${nombre} (${t.via} ${marca.nombre})`) || marca.nombre;
+}
+exports.remitenteDelCentro = remitenteDelCentro;
 /** Misma cadena salvo mayúsculas, espacios y `**`. */
 function mismoTexto(a, b) {
     const n = (v) => plano(v).replace(/\s+/g, ' ').trim().toLocaleLowerCase();
@@ -643,7 +661,7 @@ function renderCorreo(o) {
         : null;
     let fromName;
     if (o.variante === 'A' && tenant)
-        fromName = `${tenant.nombre} (${t.via} ${marca.nombre})`;
+        fromName = remitenteDelCentro(o.app, tenant.nombre, idioma);
     else if (o.variante === 'B' && remitenteB)
         fromName = remitenteB.nombre;
     else
