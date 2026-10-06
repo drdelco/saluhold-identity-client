@@ -146,6 +146,29 @@ cargaba Mulish 800 (la del wordmark) con un `@import` de Google Fonts: era el
   `background`, `<link href>`, y `@import` / `url(...)` de los `<style>` y de
   los atributos `style`. Los enlaces de navegación (`<a href>`) no cuentan.
 
+### Enlaces: al dominio de la app (0.9.2)
+
+Resend: «Ensure link URLs match sending domain». Todo enlace http(s) de un
+correo va al dominio de la app que lo envía (o a un subdominio suyo). Un botón
+a `cloudfunctions.net`, a `run.app`, a otra app de la suite o a
+`saluhold.com` es una señal que los filtros puntúan.
+
+- **En el marco**: el pie de la variante C NOMBRA las apps hermanas en gris,
+  sin enlazarlas; solo la propia app lleva enlace. La web del centro
+  (`tenant.web`), su teléfono y su email van en texto.
+- **En cada app**: los enlaces «de acción» (confirmar, cancelar, marcar una
+  tarea…) no apuntan a la función: van por una ruta del Hosting de la app con
+  un rewrite a esa función (GET solo muestra, POST ejecuta, formulario con
+  `action=""`).
+- **Prueba para cada app**: `enlacesFueraDelDominio(app, html, { permitidos })`
+  tiene que dar `[]`. Mira el `href` de toda etiqueta que no sea `<link>`
+  (`<a>`, `<area>`, VML) y el `action` de un formulario; `mailto:`, `tel:` y
+  las anclas no cuentan. `permitidos` es la lista blanca EXPLÍCITA y corta de
+  quien compone (una cadena vale para ese host y sus subdominios; una
+  expresión regular se prueba contra el host): un destino externo inevitable
+  (la sesión de pago de Stripe), un enlace a propósito a otra app, la web del
+  propio centro o lo que escribe el profesional en el cuerpo libre.
+
 ### La marca del centro solo va en los planes que la incluyen
 
 `renderCorreo` pinta el logo y el color del centro **solo si el llamador se los

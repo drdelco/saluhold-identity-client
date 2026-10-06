@@ -572,7 +572,12 @@ function pieSuite(c, aviso) {
     const universo = conMarca(escaparHtml(c.t.universo), '{saluhold}', '<strong style="font-weight:600;">SaluHold</strong>');
     const hermanas = c.app === 'factronia'
         ? []
-        : marcas_1.APPS_DEL_PIE.map((a) => `<a href="${escaparHtml(marcas_1.MARCAS[a].web)}" style="color:${marcas_1.NEUTROS.gris};text-decoration:none;">${escaparHtml(marcas_1.MARCAS[a].nombre)}</a>`);
+        // Las apps hermanas se NOMBRAN, no se enlazan: un enlace a otro dominio en
+        // un correo de esta app es lo que Resend marca («Ensure link URLs match
+        // sending domain») y lo que puntúan los filtros. Solo la propia app enlaza.
+        : marcas_1.APPS_DEL_PIE.map((a) => (a === c.app
+            ? `<a href="${escaparHtml(marcas_1.MARCAS[a].web)}" style="color:${marcas_1.NEUTROS.gris};text-decoration:none;">${escaparHtml(marcas_1.MARCAS[a].nombre)}</a>`
+            : `<span style="color:${marcas_1.NEUTROS.gris};">${escaparHtml(marcas_1.MARCAS[a].nombre)}</span>`));
     const anio = new Date().getFullYear();
     return `<tr><td class="cx-pad" align="center" bgcolor="${marcas_1.NEUTROS.fondoPie}" style="padding:22px 40px 24px 40px;background-color:${marcas_1.NEUTROS.fondoPie};border-top:1px solid ${marcas_1.NEUTROS.lineaTabla};text-align:center;">
 ${aviso ? `<p style="margin:0 0 12px 0;${P_BASE}font-size:12px;line-height:1.5;color:${marcas_1.NEUTROS.gris};">${fmt(aviso)}</p>` : ''}

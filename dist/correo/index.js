@@ -6,5 +6,5 @@ export { renderCorreo, remitenteDelCentro, escaparHtml, sanearHtmlCorreo } from 
 export { MARCAS, APPS_DEL_PIE, NEUTROS, TONOS, FUENTES } from './marcas';
 export { contraste, normalizarHex, resolverAcento, CONTRASTE_MINIMO, OSCURECIDO_MAXIMO } from './color';
 export { TEXTOS_MARCO, IDIOMAS_SUITE, idiomaDelMarco, esRtl } from './textos';
-export { ALMACEN_LOGOS, RUTA_LOGO, APPS_CON_RUTA_DE_LOGO, LOGO_MAX_BYTES, hostDeImagenes, partesDeLogo, logoEnDominioDeLaApp, imagenDelDominio, imagenesFueraDelDominio, tipoDeImagen, manejarLogoCentro, RUTA_FUENTE_MARCA, APPS_CON_FUENTE_DE_MARCA, fuenteDeMarcaEnDominio, estiloFuenteDeMarca, recursosFueraDelDominio, } from './imagenes';
+export { ALMACEN_LOGOS, RUTA_LOGO, APPS_CON_RUTA_DE_LOGO, LOGO_MAX_BYTES, hostDeImagenes, partesDeLogo, logoEnDominioDeLaApp, imagenDelDominio, imagenesFueraDelDominio, tipoDeImagen, manejarLogoCentro, RUTA_FUENTE_MARCA, APPS_CON_FUENTE_DE_MARCA, fuenteDeMarcaEnDominio, estiloFuenteDeMarca, recursosFueraDelDominio, enlacesFueraDelDominio, } from './imagenes';
 //# sourceMappingURL=index.js.map

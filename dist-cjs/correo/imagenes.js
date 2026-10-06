@@ -22,7 +22,7 @@
 //   - Un logo en cualquier otro sitio no se puede servir desde el dominio de
 //     la app: el correo sale sin imagen, con el nombre del centro en texto.
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.manejarLogoCentro = exports.tipoDeImagen = exports.recursosFueraDelDominio = exports.estiloFuenteDeMarca = exports.fuenteDeMarcaEnDominio = exports.APPS_CON_FUENTE_DE_MARCA = exports.RUTA_FUENTE_MARCA = exports.imagenesFueraDelDominio = exports.imagenDelDominio = exports.logoEnDominioDeLaApp = exports.partesDeLogo = exports.hostDeImagenes = exports.LOGO_MAX_BYTES = exports.APPS_CON_RUTA_DE_LOGO = exports.RUTA_LOGO = exports.ALMACEN_LOGOS = void 0;
+exports.manejarLogoCentro = exports.tipoDeImagen = exports.enlacesFueraDelDominio = exports.recursosFueraDelDominio = exports.estiloFuenteDeMarca = exports.fuenteDeMarcaEnDominio = exports.APPS_CON_FUENTE_DE_MARCA = exports.RUTA_FUENTE_MARCA = exports.imagenesFueraDelDominio = exports.imagenDelDominio = exports.logoEnDominioDeLaApp = exports.partesDeLogo = exports.hostDeImagenes = exports.LOGO_MAX_BYTES = exports.APPS_CON_RUTA_DE_LOGO = exports.RUTA_LOGO = exports.ALMACEN_LOGOS = void 0;
 const marcas_1 = require("./marcas");
 /** Dónde guardan las tres apps (y el panel de Identity) el logo de un centro. */
 exports.ALMACEN_LOGOS = {
@@ -247,6 +247,68 @@ function recursosFueraDelDominio(app, html) {
     return [...new Set(fuera)];
 }
 exports.recursosFueraDelDominio = recursosFueraDelDominio;
+// ─── Enlaces: al dominio de la app ──────────────────────────────────────────
+//
+// Resend: «Ensure link URLs match sending domain». Un correo de SaluFile cuyos
+// botones van a cloudfunctions.net, a otra app de la suite o a saluhold.com es
+// otra señal que los filtros puntúan. Regla desde 0.9.2: todo enlace http(s)
+// de un correo va al dominio de la app que envía (o a un subdominio suyo), y
+// lo que no pueda ir ahí está en una lista blanca EXPLÍCITA y corta de quien
+// compone el correo (la web del propio centro, un enlace que escribe el
+// profesional, un destino externo inevitable).
+//
+// En el marco: el pie de la variante C NOMBRA las apps hermanas sin enlazarlas
+// (solo la propia app enlaza) y la web del centro va en texto.
+/** ¿Es `host` el dominio `base` o un subdominio suyo? */
+function esDelDominio(host, base) {
+    return host === base || host.endsWith('.' + base);
+}
+/** Host de un enlace http(s), en minúsculas; `null` si no es http(s) (mailto:, tel:, #ancla, cid:…); `''` si no se puede leer. */
+function hostDeEnlace(valor) {
+    const s = valor.replace(/&amp;/g, '&').trim();
+    if (!/^https?:\/\//i.test(s))
+        return null;
+    try {
+        return new URL(s).host.toLowerCase();
+    }
+    catch {
+        return '';
+    }
+}
+/**
+ * Los ENLACES http(s) de un correo ya compuesto que no van al dominio de
+ * `app` (ni a un subdominio suyo, ni a un host de `permitidos`): el `href` de
+ * cualquier etiqueta que no sea `<link>` (`<a>`, `<area>`, VML) y el `action`
+ * de un formulario. `mailto:`, `tel:` y las anclas no cuentan. Para las
+ * pruebas de cada app: tiene que dar `[]`.
+ */
+function enlacesFueraDelDominio(app, html, opciones) {
+    const base = hostDeImagenes(app);
+    const permitidos = opciones?.permitidos ?? [];
+    const texto = String(html ?? '');
+    const vistos = [];
+    const patrones = [
+        /<(?!link\b)[a-z][a-z0-9:]*\b[^>]*?\shref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi,
+        /<form\b[^>]*?\saction\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi,
+    ];
+    for (const re of patrones) {
+        let m;
+        while ((m = re.exec(texto)))
+            vistos.push((m[1] ?? m[2] ?? m[3] ?? '').replace(/&amp;/g, '&').trim());
+    }
+    const fuera = vistos.filter((href) => {
+        const host = hostDeEnlace(href);
+        if (host === null)
+            return false;
+        if (!host)
+            return true;
+        if (esDelDominio(host, base))
+            return false;
+        return !permitidos.some((p) => (typeof p === 'string' ? esDelDominio(host, p.toLowerCase()) : p.test(host)));
+    });
+    return [...new Set(fuera)];
+}
+exports.enlacesFueraDelDominio = enlacesFueraDelDominio;
 /** 30 días en el navegador, el proxy del cliente de correo y la CDN del Hosting. */
 const CACHE_OK = 'public, max-age=2592000, s-maxage=2592000';
 const CACHE_NO = 'public, max-age=300, s-maxage=300';

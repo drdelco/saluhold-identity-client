@@ -53,6 +53,21 @@ export declare function estiloFuenteDeMarca(app: AppCorreo): string;
  * (`<a href>`) no cuentan. Para las pruebas de cada app: tiene que dar `[]`.
  */
 export declare function recursosFueraDelDominio(app: AppCorreo, html: string): string[];
+export interface OpcionesEnlaces {
+    /**
+     * Hosts admitidos además del dominio de la app: una cadena vale para ese
+     * host y sus subdominios; una expresión regular se prueba contra el host.
+     */
+    permitidos?: ReadonlyArray<string | RegExp>;
+}
+/**
+ * Los ENLACES http(s) de un correo ya compuesto que no van al dominio de
+ * `app` (ni a un subdominio suyo, ni a un host de `permitidos`): el `href` de
+ * cualquier etiqueta que no sea `<link>` (`<a>`, `<area>`, VML) y el `action`
+ * de un formulario. `mailto:`, `tel:` y las anclas no cuentan. Para las
+ * pruebas de cada app: tiene que dar `[]`.
+ */
+export declare function enlacesFueraDelDominio(app: AppCorreo, html: string, opciones?: OpcionesEnlaces): string[];
 /** Lo mínimo de `http.IncomingMessage` / `ServerResponse` (Express incluido) que usa el manejador. */
 export interface PeticionLogo {
     method?: string;

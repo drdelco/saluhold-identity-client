@@ -10,7 +10,7 @@ const {
   renderCorreo, remitenteDelCentro, sanearHtmlCorreo, MARCAS, TONOS, NEUTROS, TEXTOS_MARCO, IDIOMAS_SUITE, contraste, resolverAcento,
   logoEnDominioDeLaApp, partesDeLogo, imagenDelDominio, imagenesFueraDelDominio, hostDeImagenes, manejarLogoCentro, tipoDeImagen,
   APPS_CON_RUTA_DE_LOGO, LOGO_MAX_BYTES,
-  RUTA_FUENTE_MARCA, APPS_CON_FUENTE_DE_MARCA, fuenteDeMarcaEnDominio, estiloFuenteDeMarca, recursosFueraDelDominio, FUENTES,
+  RUTA_FUENTE_MARCA, APPS_CON_FUENTE_DE_MARCA, fuenteDeMarcaEnDominio, estiloFuenteDeMarca, recursosFueraDelDominio, enlacesFueraDelDominio, FUENTES,
 } = require('../dist-cjs/correo');
 
 // El logo como lo guarda Identity (Storage) y como sale en un correo de SaluFile.
@@ -60,11 +60,18 @@ test('C: cabecera con el icono PNG y el wordmark de dos tonos de la app, pie Sal
 
 test('C: el pie nombra las apps hermanas sin color de marca (Factronia no las nombra)', () => {
   const { html } = renderCorreo(base());
-  for (const a of ['SaluFile', 'SaluFirst', 'SaluFact']) {
-    assert.ok(html.includes(`color:${NEUTROS.gris};text-decoration:none;">${a}</a>`), a);
+  // Las hermanas se nombran en gris, SIN enlace; solo la propia app enlaza.
+  assert.ok(html.includes(`<a href="https://salufile.com" style="color:${NEUTROS.gris};text-decoration:none;">SaluFile</a>`));
+  for (const a of ['SaluFirst', 'SaluFact']) {
+    assert.ok(html.includes(`<span style="color:${NEUTROS.gris};">${a}</span>`), a);
+    assert.ok(!html.includes(`>${a}</a>`), `${a} sin enlace`);
   }
+  assert.ok(!/salufirst\.com|salufact\.com/.test(html), 'ni un enlace a otra app');
   const f = renderCorreo(base({ app: 'factronia' })).html;
-  assert.ok(!f.includes('>SaluFirst</a>'));
+  assert.ok(!f.includes('SaluFirst'));
+  // SaluHold no es ninguna de las tres: las nombra todas en texto.
+  const h = renderCorreo(base({ app: 'saluHold' })).html;
+  for (const a of ['SaluFile', 'SaluFirst', 'SaluFact']) assert.ok(h.includes(`<span style="color:${NEUTROS.gris};">${a}</span>`), a);
 });
 
 test('A: logo del centro dentro de la tarjeta, su color, sus datos en el pie y «Enviado con» la app', () => {
@@ -697,6 +704,40 @@ test('NINGÚN correo referencia un recurso fuera del dominio de su app: ni Googl
   ]);
   // Un correo de Factronia con la fuente de SaluFact también es «fuera».
   assert.deepEqual(recursosFueraDelDominio('factronia', estiloFuenteDeMarca('saluFact')), ['https://salufact.com/fonts/mulish-800.woff2']);
+});
+
+test('NINGÚN enlace del marco sale del dominio de la app (apps, variantes, idiomas); lo que añade quien compone, por lista blanca', () => {
+  for (const app of Object.keys(MARCAS)) {
+    const web = MARCAS[app].web;
+    for (const variante of ['A', 'B', 'C']) {
+      for (const idioma of IDIOMAS_SUITE) {
+        const { html } = renderCorreo({
+          app, variante, idioma, titulo: 'Título', preheader: 'Pre', tenant: { ...TENANT, web: 'https://www.olivar.es' },
+          bloques: [...BLOQUES.filter((b) => !JSON.stringify(b).includes('http')),
+            { tipo: 'boton', texto: 'Abrir', url: `${web}/app` },
+            { tipo: 'acciones', acciones: [{ texto: 'Confirmar', url: `${web}/c/abc` }, { texto: 'Cancelar', url: `${web}/x/abc`, tono: 'peligro' }] }],
+        });
+        assert.deepEqual(enlacesFueraDelDominio(app, html), [], `${app} ${variante} ${idioma}`);
+      }
+    }
+  }
+  // El detector detecta: cada forma de enlazar; mailto, tel, anclas, <link> y subdominios propios no cuentan.
+  const trampa = `<a href="https://europe-west1-sanacloud-eb620.cloudfunctions.net/updateTaskStatusByToken?token=a&amp;s=1">x</a>
+<a href='https://salufirst.com/app'>x</a><a href=https://saluhold.com>x</a><a class="b" href="http://salufile.com.malo.es/">x</a>
+<a href="https://salufile.com/app">ok</a><a href="https://www.salufile.com/">ok</a><a href="mailto:a@otro.es">ok</a><a href="tel:+34965">ok</a><a href="#ancla">ok</a>
+<link rel="stylesheet" href="https://otro.es/a.css"><v:roundrect href="https://vml.es/boton"></v:roundrect>
+<form method="post" action="https://formulario.es/enviar"></form><a href="https://checkout.stripe.com/c/pay">x</a><a href="https://www.olivar.es">x</a>`;
+  assert.deepEqual(enlacesFueraDelDominio('saluFile', trampa).sort(), [
+    'http://salufile.com.malo.es/', 'https://checkout.stripe.com/c/pay',
+    'https://europe-west1-sanacloud-eb620.cloudfunctions.net/updateTaskStatusByToken?token=a&s=1',
+    'https://formulario.es/enviar', 'https://salufirst.com/app', 'https://saluhold.com', 'https://vml.es/boton', 'https://www.olivar.es',
+  ]);
+  // Lista blanca: cadena = ese host y sus subdominios; expresión regular = contra el host.
+  assert.deepEqual(enlacesFueraDelDominio('saluFile', trampa, { permitidos: ['stripe.com', 'www.olivar.es', /^(formulario|vml)\.es$/, 'cloudfunctions.net'] }).sort(), [
+    'http://salufile.com.malo.es/', 'https://salufirst.com/app', 'https://saluhold.com',
+  ]);
+  // El portal de asesorías (asesoria.factronia.com) es un subdominio de Factronia.
+  assert.deepEqual(enlacesFueraDelDominio('factronia', '<a href="https://asesoria.factronia.com/reset-password">x</a><a href="https://salufact.com">y</a>'), ['https://salufact.com']);
 });
 
 test('manejarLogoCentro: solo GET, solo el logo de un tenant, tipo por los bytes, tamaño acotado y caché', async () => {

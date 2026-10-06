@@ -226,6 +226,69 @@ export function recursosFueraDelDominio(app: AppCorreo, html: string): string[] 
   return [...new Set(fuera)];
 }
 
+// ─── Enlaces: al dominio de la app ──────────────────────────────────────────
+//
+// Resend: «Ensure link URLs match sending domain». Un correo de SaluFile cuyos
+// botones van a cloudfunctions.net, a otra app de la suite o a saluhold.com es
+// otra señal que los filtros puntúan. Regla desde 0.9.2: todo enlace http(s)
+// de un correo va al dominio de la app que envía (o a un subdominio suyo), y
+// lo que no pueda ir ahí está en una lista blanca EXPLÍCITA y corta de quien
+// compone el correo (la web del propio centro, un enlace que escribe el
+// profesional, un destino externo inevitable).
+//
+// En el marco: el pie de la variante C NOMBRA las apps hermanas sin enlazarlas
+// (solo la propia app enlaza) y la web del centro va en texto.
+
+/** ¿Es `host` el dominio `base` o un subdominio suyo? */
+function esDelDominio(host: string, base: string): boolean {
+  return host === base || host.endsWith('.' + base);
+}
+
+/** Host de un enlace http(s), en minúsculas; `null` si no es http(s) (mailto:, tel:, #ancla, cid:…); `''` si no se puede leer. */
+function hostDeEnlace(valor: string): string | null {
+  const s = valor.replace(/&amp;/g, '&').trim();
+  if (!/^https?:\/\//i.test(s)) return null;
+  try { return new URL(s).host.toLowerCase(); } catch { return ''; }
+}
+
+export interface OpcionesEnlaces {
+  /**
+   * Hosts admitidos además del dominio de la app: una cadena vale para ese
+   * host y sus subdominios; una expresión regular se prueba contra el host.
+   */
+  permitidos?: ReadonlyArray<string | RegExp>;
+}
+
+/**
+ * Los ENLACES http(s) de un correo ya compuesto que no van al dominio de
+ * `app` (ni a un subdominio suyo, ni a un host de `permitidos`): el `href` de
+ * cualquier etiqueta que no sea `<link>` (`<a>`, `<area>`, VML) y el `action`
+ * de un formulario. `mailto:`, `tel:` y las anclas no cuentan. Para las
+ * pruebas de cada app: tiene que dar `[]`.
+ */
+export function enlacesFueraDelDominio(app: AppCorreo, html: string, opciones?: OpcionesEnlaces): string[] {
+  const base = hostDeImagenes(app);
+  const permitidos = opciones?.permitidos ?? [];
+  const texto = String(html ?? '');
+  const vistos: string[] = [];
+  const patrones = [
+    /<(?!link\b)[a-z][a-z0-9:]*\b[^>]*?\shref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi,
+    /<form\b[^>]*?\saction\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi,
+  ];
+  for (const re of patrones) {
+    let m: RegExpExecArray | null;
+    while ((m = re.exec(texto))) vistos.push((m[1] ?? m[2] ?? m[3] ?? '').replace(/&amp;/g, '&').trim());
+  }
+  const fuera = vistos.filter((href) => {
+    const host = hostDeEnlace(href);
+    if (host === null) return false;
+    if (!host) return true;
+    if (esDelDominio(host, base)) return false;
+    return !permitidos.some((p) => (typeof p === 'string' ? esDelDominio(host, p.toLowerCase()) : p.test(host)));
+  });
+  return [...new Set(fuera)];
+}
+
 // ─── Manejador HTTP del logo ───────────────────────────────────────────────
 
 /** Lo mínimo de `http.IncomingMessage` / `ServerResponse` (Express incluido) que usa el manejador. */
