@@ -77,7 +77,7 @@ dependencias).
 | `lista`, `pasos` | Viñetas o números; `pasos` lleva título por paso: `{ items: [{ titulo, texto? }] }` |
 | `caja` | Neutra, éxito, aviso o peligro |
 | `ciclo` | Módulo menstrual del recordatorio: `{ titulo, texto?, fechas: [{ texto, url }], enlaces?, nota?, columnas?: 3 \| 4 }`; las fechas son botones pequeños en el acento del correo |
-| `imagen` | QR, firma, imagen clave: `{ src (https o cid:), alt, ancho?, pie? }`, centrada |
+| `imagen` | QR, firma, imagen clave: `{ src (https en el dominio de la app, o cid:), alt, ancho?, pie? }`, centrada |
 | `htmlConfianza` | Cuerpo con formato que escribe un profesional. Se sanea con `sanearHtmlCorreo` (abajo) |
 | `separador`, `firma` | Raya y despedida con nombre |
 
@@ -92,6 +92,27 @@ un `href` https, mailto o tel. Lo que el editor de la suite produce además
 no lea etiquetas; cualquier otra cosa (script, style, img, iframe, un
 comentario, un `<` suelto) se escapa y se ve como texto. Las etiquetas se
 equilibran: lo que quede abierto se cierra antes del bloque siguiente.
+
+### Imagenes: todas desde el dominio de la app (0.9.0)
+
+Un `<img>` solo sale si su direccion esta en el dominio de la app que envia
+(`MARCAS[app].web`) o es un `cid:`. Nada de `data:` ni de otros hosts (Resend:
+«Host images on the sending domain»; los filtros corporativos lo puntuan).
+
+- **Icono de la app**: PNG estatico del Hosting de cada app (`MARCAS[app].iconoUrl`).
+- **Logo del centro**: se pasa en `tenant.logoUrl` TAL CUAL esta en Identity
+  (`tenants/{id}.branding.logoUrl`, la direccion de Storage de
+  `tenant_logos/{tenantId}/logo_{ts}.png`). El marco la traduce con
+  `logoEnDominioDeLaApp(app, url)` a
+  `https://{dominio de la app}/logo/{tenantId}/logo_{ts}.png`. Un logo que no
+  este en ese almacen (otro host, otra carpeta, SVG) no sale: queda el nombre
+  del centro en texto. `saluHold` no tiene la ruta (sus correos no llevan logo).
+- **Quien sirve `/logo/**`**: cada app, con un rewrite de Hosting a una funcion
+  HTTP cuyo manejador es `manejarLogoCentro` de este paquete (solo GET/HEAD,
+  ids validados, <= 2 MB, PNG/JPEG/GIF/WEBP por sus bytes, cache de 30 dias
+  para la CDN, sin credenciales: el objeto ya es de lectura publica).
+- **Bloque `imagen`**: `src` https en el dominio de la app, o `cid:`.
+- **Prueba para cada app**: `imagenesFueraDelDominio(app, html)` tiene que dar `[]`.
 
 ### La marca del centro solo va en los planes que la incluyen
 

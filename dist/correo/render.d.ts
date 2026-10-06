@@ -4,8 +4,11 @@ export type VarianteCorreo = 'A' | 'B' | 'C';
 export interface TenantCorreo {
     nombre: string;
     /**
-     * PNG/JPG por https. En A, centrado arriba (56 px de alto como máximo); en C,
-     * a la derecha de la marca de la app (40 px como máximo).
+     * La dirección del logo en el almacén de la suite (`branding.logoUrl` de
+     * Identity, tal cual): el marco la traduce al dominio de la app
+     * (`https://{app}/logo/…`, ver imagenes.ts); cualquier otra se descarta. En
+     * A, centrado arriba (56 px de alto como máximo); en C, a la derecha de la
+     * marca de la app (40 px como máximo).
      */
     logoUrl?: string | null;
     /** Medidas naturales del logo (px), si se conocen: fijan `width`/`height` exactos (Outlook ignora `max-height`). */

@@ -6,4 +6,6 @@ export { contraste, normalizarHex, resolverAcento, CONTRASTE_MINIMO, OSCURECIDO_
 export type { AcentoResuelto } from './color';
 export { TEXTOS_MARCO, IDIOMAS_SUITE, idiomaDelMarco, esRtl } from './textos';
 export type { TextosMarco } from './textos';
+export { ALMACEN_LOGOS, RUTA_LOGO, APPS_CON_RUTA_DE_LOGO, LOGO_MAX_BYTES, hostDeImagenes, partesDeLogo, logoEnDominioDeLaApp, imagenDelDominio, imagenesFueraDelDominio, tipoDeImagen, manejarLogoCentro, } from './imagenes';
+export type { PeticionLogo, RespuestaLogo } from './imagenes';
 //# sourceMappingURL=index.d.ts.map

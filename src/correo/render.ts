@@ -28,6 +28,7 @@
 import { MARCAS, APPS_DEL_PIE, NEUTROS, TONOS, FUENTES, type AppCorreo, type MarcaCorreo, type TonoCaja } from './marcas';
 import { resolverAcento, type AcentoResuelto } from './color';
 import { TEXTOS_MARCO, idiomaDelMarco, esRtl, type TextosMarco } from './textos';
+import { logoEnDominioDeLaApp, imagenDelDominio } from './imagenes';
 
 // ─── Tipos públicos ─────────────────────────────────────────────────────────
 
@@ -36,8 +37,11 @@ export type VarianteCorreo = 'A' | 'B' | 'C';
 export interface TenantCorreo {
   nombre: string;
   /**
-   * PNG/JPG por https. En A, centrado arriba (56 px de alto como máximo); en C,
-   * a la derecha de la marca de la app (40 px como máximo).
+   * La dirección del logo en el almacén de la suite (`branding.logoUrl` de
+   * Identity, tal cual): el marco la traduce al dominio de la app
+   * (`https://{app}/logo/…`, ver imagenes.ts); cualquier otra se descarta. En
+   * A, centrado arriba (56 px de alto como máximo); en C, a la derecha de la
+   * marca de la app (40 px como máximo).
    */
   logoUrl?: string | null;
   /** Medidas naturales del logo (px), si se conocen: fijan `width`/`height` exactos (Outlook ignora `max-height`). */
@@ -195,14 +199,6 @@ function urlSegura(valor: unknown): string | null {
 function imagenSegura(valor: unknown): string | null {
   const s = String(valor ?? '').trim();
   return /^https?:\/\//i.test(s) ? s : null;
-}
-
-/** Imagen del cuerpo: https o `cid:` (adjunto en línea). Nada de data:, http ni rutas. */
-function imagenCuerpoSegura(valor: unknown): string | null {
-  const s = String(valor ?? '').trim();
-  if (/^https:\/\/[^\s"'<>]+$/i.test(s)) return s;
-  if (/^cid:[^\s"'<>]+$/i.test(s)) return s;
-  return null;
 }
 
 /** Quita lo que no puede ir en un display name de cabecera From. */
@@ -436,8 +432,8 @@ ${b.nota ? `<p style="margin:8px 0 0 0;padding:0 3px;${P_BASE}font-size:12px;lin
 </td></tr></table>`;
 }
 
-function imagen(b: Extract<BloqueCorreo, { tipo: 'imagen' }>): string {
-  const src = imagenCuerpoSegura(b.src);
+function imagen(c: Ctx, b: Extract<BloqueCorreo, { tipo: 'imagen' }>): string {
+  const src = imagenDelDominio(c.app, b.src);
   if (!src) return '';
   const ancho = Math.round(Math.min(520, Math.max(16, Number(b.ancho) || 200)));
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:4px 0 20px 0;"><tr><td align="center" style="text-align:center;">
@@ -701,7 +697,7 @@ function bloqueHtml(c: Ctx, b: BloqueCorreo): string {
     case 'nota': return nota(c, b.texto);
     case 'acciones': return acciones(c, b.botones);
     case 'ciclo': return ciclo(c, b);
-    case 'imagen': return imagen(b);
+    case 'imagen': return imagen(c, b);
     case 'htmlConfianza': return htmlConfianza(c, b.html);
     case 'pasos': return pasos(c, b);
     default: return '';
@@ -782,7 +778,7 @@ function textoBloque(b: BloqueCorreo, c: Ctx): string {
       }),
       b.nota ? plano(b.nota) : '',
     ].filter(Boolean).join('\n');
-    case 'imagen': return imagenCuerpoSegura(b.src) ? [`[${plano(b.alt)}]`, b.pie ? plano(b.pie) : ''].filter(Boolean).join('\n') : '';
+    case 'imagen': return imagenDelDominio(c.app, b.src) ? [`[${plano(b.alt)}]`, b.pie ? plano(b.pie) : ''].filter(Boolean).join('\n') : '';
     case 'htmlConfianza': return htmlATexto(sanearHtmlCorreo(b.html));
     case 'pasos': return `${b.titulo ? `${plano(b.titulo)}\n` : ''}${(b.items || []).filter((p) => p && String(p.titulo ?? '').trim())
       .map((p, n) => `${n + 1}. ${plano(p.titulo)}${p.texto ? `\n   ${plano(p.texto)}` : ''}`).join('\n')}`;
@@ -807,7 +803,12 @@ export function renderCorreo(o: OpcionesCorreo): CorreoRenderizado {
   const idioma = idiomaDelMarco(o.idioma);
   const t = TEXTOS_MARCO[idioma];
   const rtl = esRtl(idioma);
-  const tenant = o.tenant?.nombre?.trim() ? o.tenant : null;
+  // El logo del centro, SIEMPRE desde el dominio de la app (ver imagenes.ts):
+  // la dirección de Storage se traduce a `https://{app}/logo/…`; un logo que
+  // no esté en el almacén de la suite no sale (queda el nombre en texto).
+  const tenant: TenantCorreo | null = o.tenant?.nombre?.trim()
+    ? { ...o.tenant, logoUrl: logoEnDominioDeLaApp(o.app, o.tenant.logoUrl) }
+    : null;
 
   const acento = o.variante === 'A' && tenant
     ? resolverAcento(tenant.colorPrimario, marca.accion, marca.acento)

@@ -8,11 +8,17 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const {
   renderCorreo, remitenteDelCentro, sanearHtmlCorreo, MARCAS, TONOS, NEUTROS, TEXTOS_MARCO, IDIOMAS_SUITE, contraste, resolverAcento,
+  logoEnDominioDeLaApp, partesDeLogo, imagenDelDominio, imagenesFueraDelDominio, hostDeImagenes, manejarLogoCentro, tipoDeImagen,
+  APPS_CON_RUTA_DE_LOGO, LOGO_MAX_BYTES,
 } = require('../dist-cjs/correo');
+
+// El logo como lo guarda Identity (Storage) y como sale en un correo de SaluFile.
+const LOGO_STORAGE = 'https://firebasestorage.googleapis.com/v0/b/identity-44874.firebasestorage.app/o/tenant_logos%2FtenantOlivar01%2Flogo_1770200467497.png?alt=media&token=abc';
+const LOGO_CORREO = 'https://salufile.com/logo/tenantOlivar01/logo_1770200467497.png';
 
 const TENANT = {
   nombre: 'Clínica Olivar',
-  logoUrl: 'https://logos.ejemplo.es/olivar.png',
+  logoUrl: LOGO_STORAGE,
   colorPrimario: '#2f6f62',
   direccion: 'Calle del Olivar 14, 03001 Alicante',
   telefono: '965 12 34 56',
@@ -62,7 +68,7 @@ test('C: el pie nombra las apps hermanas sin color de marca (Factronia no las no
 
 test('A: logo del centro dentro de la tarjeta, su color, sus datos en el pie y «Enviado con» la app', () => {
   const { html, fromName, meta } = renderCorreo(base({ variante: 'A', tenant: TENANT }));
-  assert.ok(html.includes(`src="${TENANT.logoUrl}"`));
+  assert.ok(html.includes(`src="${LOGO_CORREO}"`));
   assert.ok(html.includes('max-height:56px'));
   assert.ok(!html.includes(`width="32" height="32"`), 'sin la cabecera de la app');
   assert.ok(html.includes(`border-top:3px solid ${TENANT.colorPrimario}`));
@@ -93,9 +99,9 @@ test('C con tenant y logo: marca de la app a la izquierda, logo del centro a la 
   const { html, text, fromName, meta } = renderCorreo(base({ app: 'saluFirst', tenant: TENANT }));
   const m = MARCAS.saluFirst;
   const iApp = html.indexOf(`src="${m.iconoUrl}" width="32"`);
-  const iLogo = html.indexOf(`src="${TENANT.logoUrl}"`);
+  const iLogo = html.indexOf(`src="${LOGO_CORREO.replace('salufile.com', 'salufirst.com')}"`);
   assert.ok(iApp > 0 && iLogo > iApp, 'la app primero (inicio de lectura), el logo después');
-  assert.ok(/<td valign="middle" align="right"[^>]*><img src="https:\/\/logos\.ejemplo\.es\/olivar\.png" height="40"/.test(html), 'logo en la celda derecha, 40 px de alto');
+  assert.ok(/<td valign="middle" align="right"[^>]*><img src="https:\/\/salufirst\.com\/logo\/tenantOlivar01\/logo_1770200467497\.png" height="40"/.test(html), 'logo en la celda derecha, 40 px de alto');
   assert.ok(html.includes('max-height:40px;max-width:180px;width:auto;height:auto;'), 'sin medidas: topes que conservan la proporción');
   assert.ok(html.includes(`alt="${TENANT.nombre}"`));
   assert.ok(!html.includes('max-height:56px'), 'no es la cabecera de A');
@@ -125,7 +131,7 @@ test('C con tenant sin logo: el nombre en una línea gris bajo el título; si va
   const t = { nombre: 'Centro Médico Norte' };
   const { html, text } = renderCorreo(base({ tenant: t }));
   assert.ok(html.includes(`color:${NEUTROS.gris};text-align:left;">Centro Médico Norte</p>`));
-  assert.ok(!html.includes('<img src="https://logos'), 'sin logo');
+  assert.ok(!html.includes('<img src="https://salufile.com/logo'), 'sin logo');
   assert.ok(html.includes(`src="${MARCAS.saluFile.iconoUrl}" width="32"`), 'cabecera normal de la app');
   assert.ok(text.includes('Título\nCentro Médico Norte'));
   const ante = renderCorreo(base({ tenant: t, antetitulo: 'Centro Médico Norte' })).html;
@@ -137,7 +143,9 @@ test('C con tenant sin logo: el nombre en una línea gris bajo el título; si va
 });
 
 test('C con tenant: escapa nombre y logo', () => {
-  const t = { nombre: '<script>alert(1)</script> & "Co"', logoUrl: 'https://l.es/a.png?x="><img onerror=1>' };
+  const t = { nombre: '<script>alert(1)</script> & "Co"', logoUrl: LOGO_STORAGE };
+  const roto = renderCorreo(base({ tenant: { ...t, logoUrl: `${LOGO_STORAGE}&x="><img onerror=1>` } })).html;
+  assert.ok(!roto.includes('"><img onerror') && !roto.includes('/logo/'), 'una dirección con comillas no es un logo');
   const conLogo = renderCorreo(base({ tenant: t }));
   assert.ok(!conLogo.html.includes('<script>alert'));
   assert.ok(!conLogo.html.includes('"><img onerror'));
@@ -160,7 +168,7 @@ test('A y B no cambian con el soporte de tenant en C', () => {
   const a = renderCorreo(base({ variante: 'A', tenant: TENANT })).html;
   assert.ok(a.includes('max-height:56px') && !a.includes('max-width:180px'));
   const b = renderCorreo(base({ variante: 'B', tenant: TENANT })).html;
-  assert.ok(!b.includes('<img src="https://logos'));
+  assert.ok(!b.includes('<img src="https://salufile.com/logo'));
   const cSin = renderCorreo(base()).html;
   assert.ok(!cSin.includes('max-width:180px'));
 });
@@ -265,7 +273,8 @@ test('imagen: https o cid:, centrada, ancho acotado, pie; lo demás se descarta'
   assert.ok(text.includes('[Código QR de la receta]'));
   assert.ok(renderCorreo(base({ bloques: [{ tipo: 'imagen', src: 'cid:firma-1', alt: 'Firma' }] })).html.includes('src="cid:firma-1"'));
   assert.ok(renderCorreo(base({ bloques: [{ tipo: 'imagen', src: 'cid:x', alt: 'x', ancho: 5000 }] })).html.includes('max-width:520px'));
-  for (const malo of ['data:image/png;base64,AAAA', 'javascript:alert(1)', 'http://inseguro.es/a.png', 'https://a.es/a.png" onerror="alert(1)', '/relativa.png']) {
+  for (const malo of ['data:image/png;base64,AAAA', 'javascript:alert(1)', 'http://salufile.com/a.png', 'https://salufile.com/a.png" onerror="alert(1)', '/relativa.png',
+    'https://firebasestorage.googleapis.com/v0/b/x/o/a.png?alt=media', 'https://salufirst.com/a.png', 'https://salufile.com.malo.es/a.png']) {
     const h = renderCorreo(base({ bloques: [{ tipo: 'imagen', src: malo, alt: 'x' }] })).html;
     assert.ok(!h.includes('max-width:200px'), malo);
   }
@@ -371,7 +380,7 @@ test('bloques nuevos: escapan su texto', () => {
   const { html } = renderCorreo(base({ variante: 'A', tenant: TENANT, bloques: [
     { tipo: 'acciones', botones: [{ texto: MALO, url: 'https://a.es/1' }, { texto: MALO, url: 'https://a.es/2', tono: 'peligro' }] },
     { tipo: 'ciclo', titulo: MALO, texto: MALO, fechas: [{ texto: MALO, url: `https://a.es/?f=${MALO}` }], enlaces: [{ texto: MALO, url: 'https://a.es/3' }], nota: MALO },
-    { tipo: 'imagen', src: 'https://a.es/i.png', alt: MALO, pie: MALO },
+    { tipo: 'imagen', src: 'https://salufile.com/i.png', alt: MALO, pie: MALO },
     { tipo: 'pasos', titulo: MALO, items: [{ titulo: MALO, texto: MALO }] },
   ] }));
   assert.ok(!/<script/i.test(html));
@@ -563,4 +572,130 @@ test('remitenteDelCentro: «Centro (vía App)» traducido, limpio y con caída a
   assert.equal(remitenteDelCentro('saluFirst', null, 'es'), 'SaluFirst');
   // La variante A sigue saliendo por el mismo helper.
   assert.equal(renderCorreo(base({ variante: 'A', tenant: TENANT, idioma: 'it' })).fromName, remitenteDelCentro('saluFile', TENANT.nombre, 'it'));
+});
+
+// ─── Imágenes: todas desde el dominio de la app ─────────────────────────────
+
+test('el logo del centro se traduce al dominio de CADA app; lo que no es del almacén no sale', () => {
+  const esperado = { saluFile: 'salufile.com', saluFirst: 'salufirst.com', saluFact: 'salufact.com', factronia: 'factronia.com' };
+  for (const [app, host] of Object.entries(esperado)) {
+    assert.equal(hostDeImagenes(app), host);
+    assert.equal(logoEnDominioDeLaApp(app, LOGO_STORAGE), `https://${host}/logo/tenantOlivar01/logo_1770200467497.png`);
+  }
+  assert.deepEqual([...APPS_CON_RUTA_DE_LOGO].sort(), Object.keys(esperado).sort());
+  // Las tres formas de la misma dirección dan lo mismo (y traducir dos veces no cambia nada).
+  const gcs = 'https://storage.googleapis.com/identity-44874.firebasestorage.app/tenant_logos/tenantOlivar01/logo_1770200467497.png';
+  assert.equal(logoEnDominioDeLaApp('saluFile', gcs), LOGO_CORREO);
+  assert.equal(logoEnDominioDeLaApp('saluFile', LOGO_CORREO), LOGO_CORREO);
+  assert.equal(logoEnDominioDeLaApp('saluFact', LOGO_CORREO), LOGO_CORREO.replace('salufile.com', 'salufact.com'));
+  assert.deepEqual(partesDeLogo(LOGO_STORAGE), { tenantId: 'tenantOlivar01', fichero: 'logo_1770200467497.png' });
+  // SaluHold (Identity) no tiene la ruta: sin logo.
+  assert.equal(logoEnDominioDeLaApp('saluHold', LOGO_STORAGE), null);
+  for (const malo of [
+    null, '', 'https://logos.ejemplo.es/olivar.png', 'javascript:alert(1)', 'data:image/png;base64,AAAA',
+    LOGO_STORAGE.replace('https:', 'http:'),
+    LOGO_STORAGE.replace('identity-44874.firebasestorage.app', 'otro-proyecto.appspot.com'),
+    LOGO_STORAGE.replace('tenant_logos', 'paciente_fotos'),
+    LOGO_STORAGE.replace('logo_1770200467497.png', 'logo_1770200467497.svg'),
+    LOGO_STORAGE.replace('logo_1770200467497.png', 'otra.png'),
+    LOGO_STORAGE.replace('tenantOlivar01', '..'),
+    LOGO_STORAGE.replace('tenantOlivar01%2F', 'tenantOlivar01%2F..%2F..%2Fsecreto%2F'),
+    'https://salufile.com.malo.es/logo/tenantOlivar01/logo_1770200467497.png',
+  ]) {
+    assert.equal(logoEnDominioDeLaApp('saluFile', malo), null, String(malo));
+    const { html } = renderCorreo(base({ variante: 'A', tenant: { nombre: 'Olivar', logoUrl: malo } }));
+    assert.ok(!/<img[^>]+alt="Olivar"/.test(html), `sin logo: ${malo}`);
+    assert.ok(html.includes('>Olivar</span>'), 'queda el nombre en texto');
+  }
+});
+
+test('NINGÚN correo lleva una imagen fuera del dominio de su app (todas las apps, variantes e idiomas)', () => {
+  for (const app of Object.keys(MARCAS)) {
+    for (const variante of ['A', 'B', 'C']) {
+      for (const idioma of IDIOMAS_SUITE) {
+        for (const logoUrl of [LOGO_STORAGE, 'https://logos.ejemplo.es/olivar.png', null]) {
+          const { html } = renderCorreo({
+            app, variante, idioma, titulo: 'Título', tenant: { ...TENANT, logoUrl },
+            bloques: [...BLOQUES,
+              { tipo: 'imagen', src: 'https://firebasestorage.googleapis.com/v0/b/x/o/qr.png?alt=media', alt: 'QR' },
+              { tipo: 'imagen', src: `${MARCAS[app].web}/qr/abc.png`, alt: 'QR' },
+              { tipo: 'htmlConfianza', html: '<p>Hola <img src="https://otro.es/pixel.gif"></p>' }],
+          });
+          assert.deepEqual(imagenesFueraDelDominio(app, html), [], `${app} ${variante} ${idioma}`);
+          assert.ok(!/src="data:/i.test(html), 'ninguna imagen incrustada');
+        }
+      }
+    }
+  }
+  // El detector detecta: no pasa en verde por no mirar.
+  const trampa = '<img src="https://firebasestorage.googleapis.com/a.png"><img src="https://salufile.com/ok.png">'
+    + '<td background="https://x.es/f.png" style="background-image:url(https://y.es/g.png)"><img src="cid:a"><img src="data:image/png;base64,AA">';
+  assert.deepEqual(imagenesFueraDelDominio('saluFile', trampa), [
+    'https://firebasestorage.googleapis.com/a.png', 'data:image/png;base64,AA', 'https://x.es/f.png', 'https://y.es/g.png',
+  ]);
+  assert.equal(imagenDelDominio('saluFile', 'https://salufile.com/a.png'), 'https://salufile.com/a.png');
+  assert.equal(imagenDelDominio('factronia', 'https://salufact.com/a.png'), null);
+});
+
+test('manejarLogoCentro: solo GET, solo el logo de un tenant, tipo por los bytes, tamaño acotado y caché', async () => {
+  const PNG = Uint8Array.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13]);
+  const pedidas = [];
+  let siguiente = () => new Response(PNG, { status: 200, headers: { 'content-type': 'application/octet-stream' } });
+  const fetchReal = globalThis.fetch;
+  globalThis.fetch = async (url) => { pedidas.push(String(url)); return siguiente(); };
+  const pedir = async (path, method = 'GET') => {
+    const r = { statusCode: 0, cab: {}, cuerpo: undefined, setHeader(k, v) { this.cab[k.toLowerCase()] = String(v); }, end(c) { this.cuerpo = c; } };
+    await manejarLogoCentro({ method, path }, r);
+    return r;
+  };
+  const RUTA = '/logo/tenantOlivar01/logo_1770200467497.png';
+  try {
+    const ok = await pedir(RUTA);
+    assert.equal(ok.statusCode, 200);
+    assert.equal(ok.cab['content-type'], 'image/png', 'el tipo sale de los bytes');
+    assert.equal(ok.cab['content-length'], String(PNG.length));
+    assert.match(ok.cab['cache-control'], /^public, max-age=\d{6,}, s-maxage=\d{6,}$/);
+    assert.equal(ok.cab['x-content-type-options'], 'nosniff');
+    assert.equal(Buffer.from(ok.cuerpo).length, PNG.length);
+    assert.deepEqual(pedidas, ['https://firebasestorage.googleapis.com/v0/b/identity-44874.firebasestorage.app/o/tenant_logos%2FtenantOlivar01%2Flogo_1770200467497.png?alt=media']);
+    const head = await pedir(RUTA, 'HEAD');
+    assert.equal(head.statusCode, 200);
+    assert.equal(head.cuerpo, undefined);
+
+    // Nada de esto llega a pedir nada a Storage.
+    pedidas.length = 0;
+    for (const ruta of ['/logo', '/logo/tenantOlivar01', '/logo/tenantOlivar01/otra.png', '/logo/tenantOlivar01/logo_1.svg',
+      '/logo/../logo_1770200467497.png', '/logo/a%2Fb/logo_1770200467497.png', '/logo/tenantOlivar01/x/logo_1770200467497.png',
+      '/logo/tenant_Olivar/logo_1770200467497.png', '/otra/tenantOlivar01/logo_1770200467497.png']) {
+      const r = await pedir(ruta);
+      assert.equal(r.statusCode, 404, ruta);
+      assert.match(r.cab['cache-control'], /max-age=300/);
+    }
+    for (const m of ['POST', 'PUT', 'DELETE', 'OPTIONS']) {
+      const r = await pedir(RUTA, m);
+      assert.equal(r.statusCode, 405, m);
+      assert.equal(r.cab.allow, 'GET, HEAD');
+    }
+    assert.equal(pedidas.length, 0);
+
+    // Lo que hay en Storage no es una imagen admitida, es enorme, no existe o Storage falla.
+    siguiente = () => new Response('<svg xmlns="http://www.w3.org/2000/svg"><script>alert(1)</script></svg>', { status: 200, headers: { 'content-type': 'image/png' } });
+    assert.equal((await pedir(RUTA)).statusCode, 404);
+    siguiente = () => new Response(new Uint8Array(LOGO_MAX_BYTES + 1).fill(0x89), { status: 200 });
+    assert.equal((await pedir(RUTA)).statusCode, 404);
+    siguiente = () => new Response('no', { status: 404 });
+    assert.equal((await pedir(RUTA)).statusCode, 404);
+    siguiente = () => new Response('ay', { status: 503 });
+    const caido = await pedir(RUTA);
+    assert.equal(caido.statusCode, 502);
+    assert.equal(caido.cab['cache-control'], 'no-store');
+    siguiente = () => { throw new Error('sin red'); };
+    assert.equal((await pedir(RUTA)).statusCode, 502);
+  } finally {
+    globalThis.fetch = fetchReal;
+  }
+  assert.equal(tipoDeImagen(Uint8Array.from([0xff, 0xd8, 0xff, 0xe0])), 'image/jpeg');
+  assert.equal(tipoDeImagen(Uint8Array.from([0x47, 0x49, 0x46, 0x38, 0x39, 0x61])), 'image/gif');
+  assert.equal(tipoDeImagen(Uint8Array.from([0x52, 0x49, 0x46, 0x46, 0, 0, 0, 0, 0x57, 0x45, 0x42, 0x50])), 'image/webp');
+  assert.equal(tipoDeImagen(Uint8Array.from([0x3c, 0x73, 0x76, 0x67])), null);
 });

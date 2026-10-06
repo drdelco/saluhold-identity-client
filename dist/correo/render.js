@@ -27,6 +27,7 @@
 import { MARCAS, APPS_DEL_PIE, NEUTROS, TONOS, FUENTES } from './marcas';
 import { resolverAcento } from './color';
 import { TEXTOS_MARCO, idiomaDelMarco, esRtl } from './textos';
+import { logoEnDominioDeLaApp, imagenDelDominio } from './imagenes';
 // ─── Utilidades ─────────────────────────────────────────────────────────────
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 /** Escapa texto para HTML (contenido y atributos). */
@@ -51,15 +52,6 @@ function urlSegura(valor) {
 function imagenSegura(valor) {
     const s = String(valor ?? '').trim();
     return /^https?:\/\//i.test(s) ? s : null;
-}
-/** Imagen del cuerpo: https o `cid:` (adjunto en línea). Nada de data:, http ni rutas. */
-function imagenCuerpoSegura(valor) {
-    const s = String(valor ?? '').trim();
-    if (/^https:\/\/[^\s"'<>]+$/i.test(s))
-        return s;
-    if (/^cid:[^\s"'<>]+$/i.test(s))
-        return s;
-    return null;
 }
 /** Quita lo que no puede ir en un display name de cabecera From. */
 function limpiarRemitente(valor) {
@@ -265,8 +257,8 @@ ${enlaces.length ? `<p style="margin:10px 0 0 0;padding:0 3px;${P_BASE}font-size
 ${b.nota ? `<p style="margin:8px 0 0 0;padding:0 3px;${P_BASE}font-size:12px;line-height:1.5;color:${NEUTROS.gris};text-align:${c.ini};">${fmt(b.nota)}</p>` : ''}
 </td></tr></table>`;
 }
-function imagen(b) {
-    const src = imagenCuerpoSegura(b.src);
+function imagen(c, b) {
+    const src = imagenDelDominio(c.app, b.src);
     if (!src)
         return '';
     const ancho = Math.round(Math.min(520, Math.max(16, Number(b.ancho) || 200)));
@@ -536,7 +528,7 @@ function bloqueHtml(c, b) {
         case 'nota': return nota(c, b.texto);
         case 'acciones': return acciones(c, b.botones);
         case 'ciclo': return ciclo(c, b);
-        case 'imagen': return imagen(b);
+        case 'imagen': return imagen(c, b);
         case 'htmlConfianza': return htmlConfianza(c, b.html);
         case 'pasos': return pasos(c, b);
         default: return '';
@@ -614,7 +606,7 @@ function textoBloque(b, c) {
             }),
             b.nota ? plano(b.nota) : '',
         ].filter(Boolean).join('\n');
-        case 'imagen': return imagenCuerpoSegura(b.src) ? [`[${plano(b.alt)}]`, b.pie ? plano(b.pie) : ''].filter(Boolean).join('\n') : '';
+        case 'imagen': return imagenDelDominio(c.app, b.src) ? [`[${plano(b.alt)}]`, b.pie ? plano(b.pie) : ''].filter(Boolean).join('\n') : '';
         case 'htmlConfianza': return htmlATexto(sanearHtmlCorreo(b.html));
         case 'pasos': return `${b.titulo ? `${plano(b.titulo)}\n` : ''}${(b.items || []).filter((p) => p && String(p.titulo ?? '').trim())
             .map((p, n) => `${n + 1}. ${plano(p.titulo)}${p.texto ? `\n   ${plano(p.texto)}` : ''}`).join('\n')}`;
@@ -640,7 +632,12 @@ export function renderCorreo(o) {
     const idioma = idiomaDelMarco(o.idioma);
     const t = TEXTOS_MARCO[idioma];
     const rtl = esRtl(idioma);
-    const tenant = o.tenant?.nombre?.trim() ? o.tenant : null;
+    // El logo del centro, SIEMPRE desde el dominio de la app (ver imagenes.ts):
+    // la dirección de Storage se traduce a `https://{app}/logo/…`; un logo que
+    // no esté en el almacén de la suite no sale (queda el nombre en texto).
+    const tenant = o.tenant?.nombre?.trim()
+        ? { ...o.tenant, logoUrl: logoEnDominioDeLaApp(o.app, o.tenant.logoUrl) }
+        : null;
     const acento = o.variante === 'A' && tenant
         ? resolverAcento(tenant.colorPrimario, marca.accion, marca.acento)
         : { accion: marca.accion, filete: marca.acento, origen: 'app' };
