@@ -139,6 +139,103 @@ export function imagenesFueraDelDominio(app, html) {
         return !(u && u.host.toLowerCase() === host);
     });
 }
+// ─── Fuente de la marca ─────────────────────────────────────────────────────
+//
+// El wordmark («SaluFile», «Factronia»…) se pinta en Mulish 800. Hasta 0.9.0
+// el marco la cargaba con un `@import` de fonts.googleapis.com: el único
+// recurso externo que quedaba en un correo (y lo que señalaba Resend). Desde
+// 0.9.1 cada app publica el WOFF2 en su Hosting, `/fonts/mulish-800.woff2`
+// (subconjunto latino, SIL OFL 1.1, con su `/fonts/OFL.txt`), y el marco
+// declara un `@font-face` con `src` en el dominio de la app que envía.
+//
+//   - Solo el wordmark usa esa fuente y solo lleva letras ASCII, en los 12
+//     idiomas: el subconjunto latino (con acentos y ñ) sobra. Ningún texto
+//     traducido se pinta con ella, así que no hay alfabeto que cubrir.
+//   - Donde el cliente no carga fuentes web (Gmail, Outlook), la pila de
+//     respaldo de `FUENTES.marca`, como siempre.
+//   - El `@font-face` va en un `<style>` propio, oculto a Outlook de
+//     escritorio (`<!--[if !mso]><!-->`): Word, ante una fuente web declarada,
+//     ignora la pila de respaldo y pinta Times New Roman.
+//   - Una app sin la ruta (`saluHold`) no declara fuente web.
+/** Ruta del Hosting de cada app que sirve la fuente del wordmark. */
+export const RUTA_FUENTE_MARCA = '/fonts/mulish-800.woff2';
+/** Apps cuyo Hosting publica `RUTA_FUENTE_MARCA`. */
+export const APPS_CON_FUENTE_DE_MARCA = ['saluFile', 'saluFirst', 'saluFact', 'factronia'];
+/** La dirección de la fuente del wordmark en el dominio de `app`, o `null` si no la publica. */
+export function fuenteDeMarcaEnDominio(app) {
+    return APPS_CON_FUENTE_DE_MARCA.includes(app) ? `https://${hostDeImagenes(app)}${RUTA_FUENTE_MARCA}` : null;
+}
+/** El `<style>` con el `@font-face` del wordmark (cadena vacía si la app no publica la fuente). */
+export function estiloFuenteDeMarca(app) {
+    const url = fuenteDeMarcaEnDominio(app);
+    if (!url)
+        return '';
+    return `<!--[if !mso]><!--><style>
+@font-face { font-family:'Mulish'; font-style:normal; font-weight:800; font-display:swap; src:url('${url}') format('woff2'); }
+</style><!--<![endif]-->`;
+}
+/**
+ * TODO recurso que un correo ya compuesto haría descargar al cliente y que NO
+ * está en el dominio de `app` (ni es `cid:`): cualquier `src` (img, fuente,
+ * vídeo, iframe, VML…), `srcset`, `background="…"`, `<link href>`, `@import` y
+ * `url(…)` de cualquier CSS (fondos, `@font-face`). Los enlaces de navegación
+ * (`<a href>`) no cuentan. Para las pruebas de cada app: tiene que dar `[]`.
+ */
+export function recursosFueraDelDominio(app, html) {
+    const host = hostDeImagenes(app);
+    const texto = String(html ?? '');
+    const vistas = [];
+    const limpia = (v) => v.replace(/&amp;/g, '&').replace(/&quot;|&#39;|&#x27;/gi, '').replace(/^["']|["']$/g, '').trim();
+    // Atributos de etiqueta que piden un recurso.
+    const deEtiqueta = [
+        /<[a-z][^>]*?\ssrc\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi,
+        /<[a-z][^>]*?\sbackground\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi,
+        /<link\b[^>]*?\shref\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s>]+))/gi,
+    ];
+    for (const re of deEtiqueta) {
+        let m;
+        while ((m = re.exec(texto)))
+            vistas.push(limpia(m[1] ?? m[2] ?? m[3] ?? ''));
+    }
+    // CSS: solo donde hay CSS de verdad (<style> y atributos style), no en el
+    // texto visible (un «url(…)» escrito por alguien no pide nada).
+    const css = [];
+    const bloques = /<style\b[^>]*>([\s\S]*?)<\/style\s*>/gi;
+    const atributos = /<[a-z][^>]*?\sstyle\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
+    let c;
+    while ((c = bloques.exec(texto)))
+        css.push(c[1]);
+    while ((c = atributos.exec(texto)))
+        css.push(c[1] ?? c[2] ?? '');
+    const deCss = [
+        /@import\s+(?:url\(\s*)?(?:&quot;|["'])?([^"')\s;]+)/gi,
+        /url\(\s*((?:&quot;|["'])?[^)]*?(?:&quot;|["'])?)\s*\)/gi,
+    ];
+    for (const trozo of css) {
+        for (const re of deCss) {
+            re.lastIndex = 0;
+            let m;
+            while ((m = re.exec(trozo)))
+                vistas.push(limpia(m[1] ?? ''));
+        }
+    }
+    const srcset = /\ssrcset\s*=\s*(?:"([^"]*)"|'([^']*)')/gi;
+    let m;
+    while ((m = srcset.exec(texto))) {
+        for (const trozo of (m[1] ?? m[2] ?? '').split(',')) {
+            const u = limpia(trozo.trim().split(/\s+/)[0] || '');
+            if (u)
+                vistas.push(u);
+        }
+    }
+    const fuera = vistas.filter((src) => {
+        if (/^cid:/i.test(src))
+            return false;
+        const u = urlHttps(src);
+        return !(u && u.host.toLowerCase() === host);
+    });
+    return [...new Set(fuera)];
+}
 /** 30 días en el navegador, el proxy del cliente de correo y la CDN del Hosting. */
 const CACHE_OK = 'public, max-age=2592000, s-maxage=2592000';
 const CACHE_NO = 'public, max-age=300, s-maxage=300';

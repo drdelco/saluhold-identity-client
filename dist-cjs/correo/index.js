@@ -4,7 +4,7 @@
 // JS puro (sin Firebase, sin DOM, sin dependencias): lo importan igual las
 // Cloud Functions por la subruta CommonJS que un script de render en local.
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.manejarLogoCentro = exports.tipoDeImagen = exports.imagenesFueraDelDominio = exports.imagenDelDominio = exports.logoEnDominioDeLaApp = exports.partesDeLogo = exports.hostDeImagenes = exports.LOGO_MAX_BYTES = exports.APPS_CON_RUTA_DE_LOGO = exports.RUTA_LOGO = exports.ALMACEN_LOGOS = exports.esRtl = exports.idiomaDelMarco = exports.IDIOMAS_SUITE = exports.TEXTOS_MARCO = exports.OSCURECIDO_MAXIMO = exports.CONTRASTE_MINIMO = exports.resolverAcento = exports.normalizarHex = exports.contraste = exports.FUENTES = exports.TONOS = exports.NEUTROS = exports.APPS_DEL_PIE = exports.MARCAS = exports.sanearHtmlCorreo = exports.escaparHtml = exports.remitenteDelCentro = exports.renderCorreo = void 0;
+exports.recursosFueraDelDominio = exports.estiloFuenteDeMarca = exports.fuenteDeMarcaEnDominio = exports.APPS_CON_FUENTE_DE_MARCA = exports.RUTA_FUENTE_MARCA = exports.manejarLogoCentro = exports.tipoDeImagen = exports.imagenesFueraDelDominio = exports.imagenDelDominio = exports.logoEnDominioDeLaApp = exports.partesDeLogo = exports.hostDeImagenes = exports.LOGO_MAX_BYTES = exports.APPS_CON_RUTA_DE_LOGO = exports.RUTA_LOGO = exports.ALMACEN_LOGOS = exports.esRtl = exports.idiomaDelMarco = exports.IDIOMAS_SUITE = exports.TEXTOS_MARCO = exports.OSCURECIDO_MAXIMO = exports.CONTRASTE_MINIMO = exports.resolverAcento = exports.normalizarHex = exports.contraste = exports.FUENTES = exports.TONOS = exports.NEUTROS = exports.APPS_DEL_PIE = exports.MARCAS = exports.sanearHtmlCorreo = exports.escaparHtml = exports.remitenteDelCentro = exports.renderCorreo = void 0;
 var render_1 = require("./render");
 Object.defineProperty(exports, "renderCorreo", { enumerable: true, get: function () { return render_1.renderCorreo; } });
 Object.defineProperty(exports, "remitenteDelCentro", { enumerable: true, get: function () { return render_1.remitenteDelCentro; } });
@@ -39,4 +39,9 @@ Object.defineProperty(exports, "imagenDelDominio", { enumerable: true, get: func
 Object.defineProperty(exports, "imagenesFueraDelDominio", { enumerable: true, get: function () { return imagenes_1.imagenesFueraDelDominio; } });
 Object.defineProperty(exports, "tipoDeImagen", { enumerable: true, get: function () { return imagenes_1.tipoDeImagen; } });
 Object.defineProperty(exports, "manejarLogoCentro", { enumerable: true, get: function () { return imagenes_1.manejarLogoCentro; } });
+Object.defineProperty(exports, "RUTA_FUENTE_MARCA", { enumerable: true, get: function () { return imagenes_1.RUTA_FUENTE_MARCA; } });
+Object.defineProperty(exports, "APPS_CON_FUENTE_DE_MARCA", { enumerable: true, get: function () { return imagenes_1.APPS_CON_FUENTE_DE_MARCA; } });
+Object.defineProperty(exports, "fuenteDeMarcaEnDominio", { enumerable: true, get: function () { return imagenes_1.fuenteDeMarcaEnDominio; } });
+Object.defineProperty(exports, "estiloFuenteDeMarca", { enumerable: true, get: function () { return imagenes_1.estiloFuenteDeMarca; } });
+Object.defineProperty(exports, "recursosFueraDelDominio", { enumerable: true, get: function () { return imagenes_1.recursosFueraDelDominio; } });
 //# sourceMappingURL=index.js.map

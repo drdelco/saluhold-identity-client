@@ -52,7 +52,11 @@ export declare const TONOS: Record<TonoCaja, {
     borde: string;
     texto: string;
 }>;
-/** Tipografías: sistema para el cuerpo, Mulish 800 (con respaldo) para el wordmark. */
+/**
+ * Tipografías: sistema para el cuerpo, Mulish 800 (con respaldo) para el
+ * wordmark. Mulish se sirve desde el dominio de cada app (ver «Fuente de la
+ * marca» en imagenes.ts): nunca desde Google Fonts.
+ */
 export declare const FUENTES: {
     readonly cuerpo: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
     readonly marca: "Mulish, 'Segoe UI', Arial, Helvetica, sans-serif";

@@ -27,7 +27,7 @@
 import { MARCAS, APPS_DEL_PIE, NEUTROS, TONOS, FUENTES } from './marcas';
 import { resolverAcento } from './color';
 import { TEXTOS_MARCO, idiomaDelMarco, esRtl } from './textos';
-import { logoEnDominioDeLaApp, imagenDelDominio } from './imagenes';
+import { logoEnDominioDeLaApp, imagenDelDominio, estiloFuenteDeMarca } from './imagenes';
 // ─── Utilidades ─────────────────────────────────────────────────────────────
 const ESC = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' };
 /** Escapa texto para HTML (contenido y atributos). */
@@ -721,8 +721,7 @@ ${o.pieAviso ? `${fmt(o.pieAviso)}<br>` : ''}${creditoApp(c, t.enviadoMediante, 
 <meta name="supported-color-schemes" content="light">
 <title>${tituloDoc}</title>
 <!--[if mso]><noscript><xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Mulish:wght@800&display=swap');
+${estiloFuenteDeMarca(o.app)}<style>
 :root { color-scheme: light only; supported-color-schemes: light; }
 body { margin:0 !important; padding:0 !important; width:100% !important; -webkit-text-size-adjust:100%; -ms-text-size-adjust:100%; }
 table { mso-table-lspace:0pt; mso-table-rspace:0pt; }

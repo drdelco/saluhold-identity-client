@@ -10,6 +10,7 @@ const {
   renderCorreo, remitenteDelCentro, sanearHtmlCorreo, MARCAS, TONOS, NEUTROS, TEXTOS_MARCO, IDIOMAS_SUITE, contraste, resolverAcento,
   logoEnDominioDeLaApp, partesDeLogo, imagenDelDominio, imagenesFueraDelDominio, hostDeImagenes, manejarLogoCentro, tipoDeImagen,
   APPS_CON_RUTA_DE_LOGO, LOGO_MAX_BYTES,
+  RUTA_FUENTE_MARCA, APPS_CON_FUENTE_DE_MARCA, fuenteDeMarcaEnDominio, estiloFuenteDeMarca, recursosFueraDelDominio, FUENTES,
 } = require('../dist-cjs/correo');
 
 // El logo como lo guarda Identity (Storage) y como sale en un correo de SaluFile.
@@ -635,6 +636,67 @@ test('NINGÚN correo lleva una imagen fuera del dominio de su app (todas las app
   ]);
   assert.equal(imagenDelDominio('saluFile', 'https://salufile.com/a.png'), 'https://salufile.com/a.png');
   assert.equal(imagenDelDominio('factronia', 'https://salufact.com/a.png'), null);
+});
+
+// ─── Fuente de la marca y recursos externos ─────────────────────────────────
+
+test('la fuente del wordmark sale del dominio de CADA app, en un <style> que Outlook no ve; saluHold, sin fuente web', () => {
+  const esperado = { saluFile: 'salufile.com', saluFirst: 'salufirst.com', saluFact: 'salufact.com', factronia: 'factronia.com' };
+  assert.equal(RUTA_FUENTE_MARCA, '/fonts/mulish-800.woff2');
+  assert.deepEqual([...APPS_CON_FUENTE_DE_MARCA].sort(), Object.keys(esperado).sort());
+  for (const [app, host] of Object.entries(esperado)) {
+    const url = `https://${host}/fonts/mulish-800.woff2`;
+    assert.equal(fuenteDeMarcaEnDominio(app), url);
+    const { html } = renderCorreo({ app, variante: 'C', titulo: 'T', bloques: BLOQUES });
+    assert.equal(html.split('@font-face').length, 2, 'un solo @font-face');
+    assert.ok(html.includes(`<!--[if !mso]><!--><style>
+@font-face { font-family:'Mulish'; font-style:normal; font-weight:800; font-display:swap; src:url('${url}') format('woff2'); }
+</style><!--<![endif]-->`), app);
+    assert.ok(html.indexOf('@font-face') < html.indexOf(':root {'), 'en su propio bloque, antes del de estilos');
+  }
+  assert.equal(fuenteDeMarcaEnDominio('saluHold'), null);
+  assert.equal(estiloFuenteDeMarca('saluHold'), '');
+  assert.ok(!renderCorreo({ app: 'saluHold', variante: 'C', titulo: 'T', bloques: BLOQUES }).html.includes('@font-face'));
+  // La pila de respaldo sigue ahí para quien no carga fuentes web.
+  assert.match(FUENTES.marca, /^Mulish, 'Segoe UI', Arial, Helvetica, sans-serif$/);
+  // El wordmark, lo único que se pinta con esa fuente, es ASCII: el subconjunto latino lo cubre.
+  for (const m of Object.values(MARCAS)) assert.match(m.wordmark.map((w) => w.texto).join(''), /^[A-Za-z]+$/);
+});
+
+test('NINGÚN correo referencia un recurso fuera del dominio de su app: ni Google Fonts ni nada (apps, variantes, idiomas)', () => {
+  for (const app of Object.keys(MARCAS)) {
+    for (const variante of ['A', 'B', 'C']) {
+      for (const idioma of IDIOMAS_SUITE) {
+        for (const logoUrl of [LOGO_STORAGE, 'https://logos.ejemplo.es/olivar.png', null]) {
+          const { html } = renderCorreo({
+            app, variante, idioma, titulo: 'Título', preheader: 'Pre', tenant: { ...TENANT, logoUrl },
+            bloques: [...BLOQUES,
+              { tipo: 'imagen', src: 'https://firebasestorage.googleapis.com/v0/b/x/o/qr.png?alt=media', alt: 'QR' },
+              { tipo: 'imagen', src: `${MARCAS[app].web}/qr/abc.png`, alt: 'QR' },
+              { tipo: 'htmlConfianza', html: '<p style="background:url(https://otro.es/f.png)">Hola <img src="https://otro.es/pixel.gif"><link rel="stylesheet" href="https://otro.es/css2?family=X"><style>@import "https://otro.es/a.css";</style></p>' }],
+          });
+          assert.deepEqual(recursosFueraDelDominio(app, html), [], `${app} ${variante} ${idioma}`);
+          assert.ok(!/fonts\.(googleapis|gstatic)\.com/i.test(html), 'ni rastro de Google Fonts');
+          assert.ok(!/<link\b/i.test(html), 'ningún <link>');
+        }
+      }
+    }
+  }
+  // El detector detecta: cada forma de pedir un recurso, y los <a href> no cuentan.
+  const trampa = `<style>@import url('https://fonts.googleapis.com/css2?family=Mulish:wght@800&display=swap');
+@import "https://a.es/b.css";
+@font-face { font-family:X; src:url(https://fonts.gstatic.com/s/x.woff2) format('woff2'), url("https://salufile.com/fonts/mulish-800.woff2"); }</style>
+<link rel="stylesheet" href="https://c.es/d.css"><link href='https://salufile.com/e.css'>
+<a href="https://navegacion.es/ok">enlace</a><img src="https://salufile.com/ok.png"><img src="cid:a"><img src="data:image/png;base64,AA">
+<img src=https://sin-comillas.es/p.gif><img srcset="https://s1.es/a.png 1x, https://salufile.com/b.png 2x">
+<td background="https://x.es/f.png" style="background-image:url(&quot;https://y.es/g.png&quot;)"><v:fill src="https://vml.es/h.png" /><iframe src="http://marco.es/"></iframe>`;
+  assert.deepEqual(recursosFueraDelDominio('saluFile', trampa).sort(), [
+    'data:image/png;base64,AA', 'http://marco.es/', 'https://a.es/b.css', 'https://c.es/d.css',
+    'https://fonts.googleapis.com/css2?family=Mulish:wght@800&display=swap', 'https://fonts.gstatic.com/s/x.woff2',
+    'https://s1.es/a.png', 'https://sin-comillas.es/p.gif', 'https://vml.es/h.png', 'https://x.es/f.png', 'https://y.es/g.png',
+  ]);
+  // Un correo de Factronia con la fuente de SaluFact también es «fuera».
+  assert.deepEqual(recursosFueraDelDominio('factronia', estiloFuenteDeMarca('saluFact')), ['https://salufact.com/fonts/mulish-800.woff2']);
 });
 
 test('manejarLogoCentro: solo GET, solo el logo de un tenant, tipo por los bytes, tamaño acotado y caché', async () => {

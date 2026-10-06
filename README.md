@@ -114,6 +114,38 @@ Un `<img>` solo sale si su dirección está en el dominio de la app que envía
 - **Bloque `imagen`**: `src` https en el dominio de la app, o `cid:`.
 - **Prueba para cada app**: `imagenesFueraDelDominio(app, html)` tiene que dar `[]`.
 
+### Fuente de la marca: también desde el dominio de la app (0.9.1)
+
+Ningún correo referencia `fonts.googleapis.com` ni `fonts.gstatic.com`, ni
+ningún otro host que no sea el de la app que envía. Hasta 0.9.0 el marco
+cargaba Mulish 800 (la del wordmark) con un `@import` de Google Fonts: era el
+último recurso externo y lo que señalaba Resend.
+
+- **Dónde vive**: cada app publica en su Hosting
+  `/fonts/mulish-800.woff2` (`RUTA_FUENTE_MARCA`; Mulish 800, subconjunto
+  latino, 13 KB, SIL OFL 1.1 con su `/fonts/OFL.txt`), con
+  `Cache-Control: public, max-age=31536000, immutable`,
+  `Access-Control-Allow-Origin: *` (una fuente se pide con CORS) y
+  `Cross-Origin-Resource-Policy: cross-origin`. Si la fuente cambia, se
+  publica con OTRO nombre y se cambia la constante (la caché es de un año).
+- **Cómo la carga el correo**: `estiloFuenteDeMarca(app)` = un `<style>`
+  propio con un `@font-face` cuyo `src` es
+  `fuenteDeMarcaEnDominio(app)` (`https://{dominio de la app}/fonts/mulish-800.woff2`),
+  envuelto en `<!--[if !mso]><!--> … <!--<![endif]-->`: Outlook de
+  escritorio (Word), ante una fuente web declarada, ignora la pila de respaldo
+  y pinta Times New Roman.
+- **Qué se pinta con ella**: SOLO el wordmark de la app, que es ASCII en los 12
+  idiomas. Ningún texto traducido usa esa fuente, así que no hay alfabeto sin
+  cubrir. Donde el cliente no carga fuentes web (Gmail, Outlook), la pila de
+  `FUENTES.marca` (Segoe UI, Arial…), como siempre. Apple Mail, iOS Mail,
+  Thunderbird y Outlook para Mac sí la cargan.
+- **`saluHold`** no publica la fuente (`APPS_CON_FUENTE_DE_MARCA`): sus
+  correos no declaran `@font-face`.
+- **Prueba para cada app**: `recursosFueraDelDominio(app, html)` tiene que dar
+  `[]`. Mira todo lo que el cliente descargaría: cualquier `src`, `srcset`,
+  `background`, `<link href>`, y `@import` / `url(...)` de los `<style>` y de
+  los atributos `style`. Los enlaces de navegación (`<a href>`) no cuentan.
+
 ### La marca del centro solo va en los planes que la incluyen
 
 `renderCorreo` pinta el logo y el color del centro **solo si el llamador se los

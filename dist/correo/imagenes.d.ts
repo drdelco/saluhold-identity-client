@@ -37,6 +37,22 @@ export declare function imagenDelDominio(app: AppCorreo, valor: unknown): string
  * Para las pruebas de cada app: tiene que devolver `[]`.
  */
 export declare function imagenesFueraDelDominio(app: AppCorreo, html: string): string[];
+/** Ruta del Hosting de cada app que sirve la fuente del wordmark. */
+export declare const RUTA_FUENTE_MARCA = "/fonts/mulish-800.woff2";
+/** Apps cuyo Hosting publica `RUTA_FUENTE_MARCA`. */
+export declare const APPS_CON_FUENTE_DE_MARCA: readonly AppCorreo[];
+/** La dirección de la fuente del wordmark en el dominio de `app`, o `null` si no la publica. */
+export declare function fuenteDeMarcaEnDominio(app: AppCorreo): string | null;
+/** El `<style>` con el `@font-face` del wordmark (cadena vacía si la app no publica la fuente). */
+export declare function estiloFuenteDeMarca(app: AppCorreo): string;
+/**
+ * TODO recurso que un correo ya compuesto haría descargar al cliente y que NO
+ * está en el dominio de `app` (ni es `cid:`): cualquier `src` (img, fuente,
+ * vídeo, iframe, VML…), `srcset`, `background="…"`, `<link href>`, `@import` y
+ * `url(…)` de cualquier CSS (fondos, `@font-face`). Los enlaces de navegación
+ * (`<a href>`) no cuentan. Para las pruebas de cada app: tiene que dar `[]`.
+ */
+export declare function recursosFueraDelDominio(app: AppCorreo, html: string): string[];
 /** Lo mínimo de `http.IncomingMessage` / `ServerResponse` (Express incluido) que usa el manejador. */
 export interface PeticionLogo {
     method?: string;
