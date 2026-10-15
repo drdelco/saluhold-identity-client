@@ -40,6 +40,8 @@ export type ResultadoAltaServidor =
     pacienteId: string;
     enSuClinica: boolean;
 };
+/** ID token de la cuenta de la Cloud Function, para `audiencia`. Lo usan las dos altas de servidor. */
+export declare function idTokenDelServidor(audiencia: string): Promise<string>;
 /**
  * Da de alta un paciente en Identity por el camino canónico.
  *

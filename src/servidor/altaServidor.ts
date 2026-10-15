@@ -52,7 +52,8 @@ export type ResultadoAltaServidor =
   /** Ya había una ficha con ese documento: no se crea otra; quien llama la vincula. */
   | { creado: false; pacienteId: string; enSuClinica: boolean };
 
-async function idTokenDelServidor(audiencia: string): Promise<string> {
+/** ID token de la cuenta de la Cloud Function, para `audiencia`. Lo usan las dos altas de servidor. */
+export async function idTokenDelServidor(audiencia: string): Promise<string> {
   const r = await fetch(`${METADATOS}?audience=${encodeURIComponent(audiencia)}&format=full`, {
     headers: { 'Metadata-Flavor': 'Google' },
   });

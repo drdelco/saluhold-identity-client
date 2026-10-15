@@ -14,7 +14,8 @@
 // servidor de metadatos y la llamada falla: es a propósito.
 const URL_ALTA = 'https://europe-west1-identity-44874.cloudfunctions.net/altaPacienteServidor';
 const METADATOS = 'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity';
-async function idTokenDelServidor(audiencia) {
+/** ID token de la cuenta de la Cloud Function, para `audiencia`. Lo usan las dos altas de servidor. */
+export async function idTokenDelServidor(audiencia) {
     const r = await fetch(`${METADATOS}?audience=${encodeURIComponent(audiencia)}&format=full`, {
         headers: { 'Metadata-Flavor': 'Google' },
     });

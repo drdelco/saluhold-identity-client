@@ -241,6 +241,25 @@ no lo reconoce: nunca supone España. `nombrePaisDe(codigo)` hace lo contrario.
 que escriben los selectores de la suite. La tabla está escrita, no se calcula
 con `Intl.DisplayNames`, para que dé lo mismo en cualquier motor.
 
+## Altas desde un servidor (`/servidor`)
+
+Las altas de datos maestros las construye Identity. Un frontend llama al
+callable con su sesión (`crearPacienteCanonico`, `crearEmpresaCanonica`); un
+backend sin sesión de usuario detrás usa estos clientes, que llaman a un
+endpoint de Identity NO público con el ID token de su propia cuenta de servicio
+(servidor de metadatos: sin claves; fuera de Google Cloud fallan a propósito):
+
+| Función | Endpoint de Identity | Ya existe |
+|---|---|---|
+| `darDeAltaPacienteDesdeServidor(app, clinicaId, datos)` | `altaPacienteServidor` | `{creado:false, pacienteId, enSuClinica}` |
+| `darDeAltaEmpresaDesdeServidor(app, clinicaId, datos)` (0.11.0) | `altaEmpresaServidor` | `{creada:false, empresaId, enSuClinica}` |
+
+Que ya exista no es un error: quien llama vincula la ficha si no es de su
+clínica. Un rechazo de Identity (documento mal, país que no reconoce…) lanza
+`Error` con su motivo. Cada cuenta solo puede dar altas con los orígenes de su
+app (`app`): hoy la de las functions de SaluFact, `salufact` y
+`salufirst-comisiones`.
+
 ## Traducir la interfaz
 
 Todo el texto que pintan los componentes (`CamposAltaPaciente`, el escáner de

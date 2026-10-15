@@ -14,9 +14,10 @@
 // secreto que guardar ni rotar. Fuera de Google Cloud (un script local) no hay
 // servidor de metadatos y la llamada falla: es a propósito.
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.darDeAltaPacienteDesdeServidor = void 0;
+exports.darDeAltaPacienteDesdeServidor = exports.idTokenDelServidor = void 0;
 const URL_ALTA = 'https://europe-west1-identity-44874.cloudfunctions.net/altaPacienteServidor';
 const METADATOS = 'http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/identity';
+/** ID token de la cuenta de la Cloud Function, para `audiencia`. Lo usan las dos altas de servidor. */
 async function idTokenDelServidor(audiencia) {
     const r = await fetch(`${METADATOS}?audience=${encodeURIComponent(audiencia)}&format=full`, {
         headers: { 'Metadata-Flavor': 'Google' },
@@ -25,6 +26,7 @@ async function idTokenDelServidor(audiencia) {
         throw new Error(`No se pudo obtener la identidad del servidor (${r.status}).`);
     return r.text();
 }
+exports.idTokenDelServidor = idTokenDelServidor;
 /**
  * Da de alta un paciente en Identity por el camino canónico.
  *

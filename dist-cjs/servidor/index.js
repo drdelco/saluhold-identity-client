@@ -8,7 +8,7 @@
 // permite a las functions de las cuatro apps —todas CommonJS— compartir estas
 // reglas en vez de tener cada una su copia.
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.darDeAltaPacienteDesdeServidor = exports.liberarNifEnIdentity = exports.acunarNumeroHistoria = exports.clinicasDelGrupo = exports.vincularPacienteEnIdentity = void 0;
+exports.darDeAltaEmpresaDesdeServidor = exports.darDeAltaPacienteDesdeServidor = exports.liberarNifEnIdentity = exports.acunarNumeroHistoria = exports.clinicasDelGrupo = exports.vincularPacienteEnIdentity = void 0;
 var vinculacion_1 = require("./vinculacion");
 Object.defineProperty(exports, "vincularPacienteEnIdentity", { enumerable: true, get: function () { return vinculacion_1.vincularPacienteEnIdentity; } });
 Object.defineProperty(exports, "clinicasDelGrupo", { enumerable: true, get: function () { return vinculacion_1.clinicasDelGrupo; } });
@@ -17,4 +17,6 @@ var liberarNif_1 = require("./liberarNif");
 Object.defineProperty(exports, "liberarNifEnIdentity", { enumerable: true, get: function () { return liberarNif_1.liberarNifEnIdentity; } });
 var altaServidor_1 = require("./altaServidor");
 Object.defineProperty(exports, "darDeAltaPacienteDesdeServidor", { enumerable: true, get: function () { return altaServidor_1.darDeAltaPacienteDesdeServidor; } });
+var altaEmpresaServidor_1 = require("./altaEmpresaServidor");
+Object.defineProperty(exports, "darDeAltaEmpresaDesdeServidor", { enumerable: true, get: function () { return altaEmpresaServidor_1.darDeAltaEmpresaDesdeServidor; } });
 //# sourceMappingURL=index.js.map

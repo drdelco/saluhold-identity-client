@@ -9,4 +9,5 @@
 export { vincularPacienteEnIdentity, clinicasDelGrupo, acunarNumeroHistoria, } from './vinculacion';
 export { liberarNifEnIdentity, } from './liberarNif';
 export { darDeAltaPacienteDesdeServidor, } from './altaServidor';
+export { darDeAltaEmpresaDesdeServidor, } from './altaEmpresaServidor';
 //# sourceMappingURL=index.js.map

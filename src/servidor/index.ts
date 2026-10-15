@@ -29,3 +29,10 @@ export {
   type DatosAltaServidor,
   type ResultadoAltaServidor,
 } from './altaServidor';
+
+export {
+  darDeAltaEmpresaDesdeServidor,
+  type OrigenAltaEmpresaServidor,
+  type DatosAltaEmpresaServidor,
+  type ResultadoAltaEmpresaServidor,
+} from './altaEmpresaServidor';
