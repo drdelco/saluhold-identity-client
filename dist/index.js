@@ -293,6 +293,7 @@ export function mapEmpresaToCliente(e) {
         id: e.id,
         tipo: 'EMPRESA',
         nif: e.cif || '',
+        tipoIdentificador: e.tipoIdentificador,
         nombreRazon: e.nombre || '',
         email: contacto?.email || undefined,
         telefono: contacto?.telefono || undefined,
@@ -491,9 +492,20 @@ export async function localGetClinicConfig() {
     return result?.config ?? null;
 }
 // ─────────────────────────────────────────────────────────────────────────────
-// Identificador personal (DNI / NIE / pasaporte / CIF)
+// Identificador personal (DNI / NIE / pasaporte / CIF): su FORMA
 // ─────────────────────────────────────────────────────────────────────────────
 export { normalizarIdentificador, canonizarIdentificador, tipoDeIdentificador, validarIdentificador, identificadorAceptable, } from './identificador';
+// ─────────────────────────────────────────────────────────────────────────────
+// Tipo de documento de la ficha (`tipoIdentificador`) — vocabulario único
+// ─────────────────────────────────────────────────────────────────────────────
+// Lo que se GUARDA en pacientes y empresas, con la lista L7 de la AEAT para los
+// documentos extranjeros. `FormaIdentificador` (arriba) es otra cosa: lo que se
+// deduce del número cuando nadie ha elegido el tipo.
+export { TIPOS_IDENTIFICADOR, OPCIONES_TIPO_IDENTIFICADOR, PREFIJOS_NIF_IVA, LARGO_MAXIMO_DOCUMENTO, esTipoIdentificador, etiquetaTipoIdentificador, idTypeAeatDe, esNifEspanol, opcionesTipoIdentificador, paisDeNifIva, normalizarDocumento, validarDocumento, tipoPorForma, resolverDocumento, } from './tipoDocumento';
+// ─────────────────────────────────────────────────────────────────────────────
+// País: nombre ↔ ISO 3166-1 alfa-2 (`direccion.pais` es texto; VERI*FACTU, ISO)
+// ─────────────────────────────────────────────────────────────────────────────
+export { PAISES_ISO, codigoPaisDe, nombrePaisDe, esCodigoPais } from './pais';
 // ─────────────────────────────────────────────────────────────────────────────
 // Sexo (H / M / O) — codec único de la suite
 // ─────────────────────────────────────────────────────────────────────────────

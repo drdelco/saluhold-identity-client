@@ -27,7 +27,13 @@
  * Confundirlas convertiría la validación en un obstáculo que la gente
  * aprendería a saltarse, que es como mueren las validaciones.
  */
-export type TipoIdentificador = 'DNI' | 'NIE' | 'PASAPORTE' | 'CIF' | 'PROVISIONAL' | 'OTRO';
+/**
+ * La FORMA del valor, deducida de él. No es el tipo de documento que se guarda
+ * en la ficha (`tipoIdentificador`): ese es `TipoIdentificador`, de
+ * `tipoDocumento.ts`, y lo elige una persona cuando la forma no basta (un
+ * pasaporte y un documento de otro país pueden escribirse igual).
+ */
+export type FormaIdentificador = 'DNI' | 'NIE' | 'PASAPORTE' | 'CIF' | 'PROVISIONAL' | 'OTRO';
 export type ResultadoValidacion = 
 /** DNI o NIE con letra de control correcta. */
 {
@@ -46,7 +52,7 @@ export type ResultadoValidacion =
 /** No es comprobable (pasaporte, CIF, provisional, vacío): NO es un error. */
  | {
     estado: 'no-aplica';
-    tipo: TipoIdentificador;
+    tipo: FormaIdentificador;
     normalizado: string;
 };
 /** Mayúsculas y sin separadores. Es la forma en la que se ALMACENA. */
@@ -63,7 +69,7 @@ export declare function normalizarIdentificador(valor: string | null | undefined
  * con lo que se libraría de la validación justo en el caso en que más falta
  * hace. El padding es parte de reconocerlo, no un adorno de presentación.
  */
-export declare function tipoDeIdentificador(valor: string | null | undefined): TipoIdentificador;
+export declare function tipoDeIdentificador(valor: string | null | undefined): FormaIdentificador;
 /**
  * Comprueba el identificador.
  *

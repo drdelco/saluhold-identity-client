@@ -21,8 +21,8 @@
  * a Cloud Functions o mostrar un error.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.fichaEditableDesdeIdentity = exports.construirParchePaciente = exports.TEXTOS_UI_ES = exports.textosUI = exports.configurarTextosUI = exports.avisoIdiomaNacionalidad = exports.construirDatosAlta = exports.validarAlta = exports.aplicarLecturaAlAlta = exports.pide = exports.PERFILES_ALTA = exports.FORM_ALTA_VACIO = exports.comprimirParaIA = exports.sexoDesdeExterno = exports.esMujer = exports.esHombre = exports.comoSexoIdentity = exports.displayASexo = exports.sexoADisplay = exports.OPCIONES_SEXO = exports.identificadorAceptable = exports.validarIdentificador = exports.tipoDeIdentificador = exports.canonizarIdentificador = exports.normalizarIdentificador = exports.localGetClinicConfig = exports.localBuscarProfesionalPorUID = exports.localObtenerProfesional = exports.localBuscarProfesionales = exports.localListarProfesionales = exports.localListarPacientesRecientes = exports.localObtenerPaciente = exports.localBuscarPacientes = exports.localObtenerCliente = exports.localClientesRecientes = exports.localBuscarClientes = exports.mapEmpresaToCliente = exports.mapPacienteToCliente = exports.localGet = exports.localPost = exports.getAcceleratorToken = exports.setAcceleratorToken = exports.ensureLocalServerChecked = exports.resetLocalServerCheck = exports.getLocalServerStats = exports.isLocalServerAvailable = exports.getLocalServerUrl = exports.hayAceleradorConfigurado = exports.setLocalServerHostExternal = exports.setLocalServerHost = void 0;
-exports.fechaISO = void 0;
+exports.sexoADisplay = exports.OPCIONES_SEXO = exports.esCodigoPais = exports.nombrePaisDe = exports.codigoPaisDe = exports.PAISES_ISO = exports.resolverDocumento = exports.tipoPorForma = exports.validarDocumento = exports.normalizarDocumento = exports.paisDeNifIva = exports.opcionesTipoIdentificador = exports.esNifEspanol = exports.idTypeAeatDe = exports.etiquetaTipoIdentificador = exports.esTipoIdentificador = exports.LARGO_MAXIMO_DOCUMENTO = exports.PREFIJOS_NIF_IVA = exports.OPCIONES_TIPO_IDENTIFICADOR = exports.TIPOS_IDENTIFICADOR = exports.identificadorAceptable = exports.validarIdentificador = exports.tipoDeIdentificador = exports.canonizarIdentificador = exports.normalizarIdentificador = exports.localGetClinicConfig = exports.localBuscarProfesionalPorUID = exports.localObtenerProfesional = exports.localBuscarProfesionales = exports.localListarProfesionales = exports.localListarPacientesRecientes = exports.localObtenerPaciente = exports.localBuscarPacientes = exports.localObtenerCliente = exports.localClientesRecientes = exports.localBuscarClientes = exports.mapEmpresaToCliente = exports.mapPacienteToCliente = exports.localGet = exports.localPost = exports.getAcceleratorToken = exports.setAcceleratorToken = exports.ensureLocalServerChecked = exports.resetLocalServerCheck = exports.getLocalServerStats = exports.isLocalServerAvailable = exports.getLocalServerUrl = exports.hayAceleradorConfigurado = exports.setLocalServerHostExternal = exports.setLocalServerHost = void 0;
+exports.fechaISO = exports.fichaEditableDesdeIdentity = exports.construirParchePaciente = exports.TEXTOS_UI_ES = exports.textosUI = exports.configurarTextosUI = exports.avisoIdiomaNacionalidad = exports.construirDatosAlta = exports.validarAlta = exports.aplicarLecturaAlAlta = exports.pide = exports.PERFILES_ALTA = exports.FORM_ALTA_VACIO = exports.comprimirParaIA = exports.sexoDesdeExterno = exports.esMujer = exports.esHombre = exports.comoSexoIdentity = exports.displayASexo = void 0;
 // ═══════════════════════════════════════════════════════════════════════════
 // ESTADO Y CONFIGURACIÓN DE CONEXIÓN
 // ═══════════════════════════════════════════════════════════════════════════
@@ -310,6 +310,7 @@ function mapEmpresaToCliente(e) {
         id: e.id,
         tipo: 'EMPRESA',
         nif: e.cif || '',
+        tipoIdentificador: e.tipoIdentificador,
         nombreRazon: e.nombre || '',
         email: contacto?.email || undefined,
         telefono: contacto?.telefono || undefined,
@@ -520,7 +521,7 @@ async function localGetClinicConfig() {
 }
 exports.localGetClinicConfig = localGetClinicConfig;
 // ─────────────────────────────────────────────────────────────────────────────
-// Identificador personal (DNI / NIE / pasaporte / CIF)
+// Identificador personal (DNI / NIE / pasaporte / CIF): su FORMA
 // ─────────────────────────────────────────────────────────────────────────────
 var identificador_1 = require("./identificador");
 Object.defineProperty(exports, "normalizarIdentificador", { enumerable: true, get: function () { return identificador_1.normalizarIdentificador; } });
@@ -528,6 +529,35 @@ Object.defineProperty(exports, "canonizarIdentificador", { enumerable: true, get
 Object.defineProperty(exports, "tipoDeIdentificador", { enumerable: true, get: function () { return identificador_1.tipoDeIdentificador; } });
 Object.defineProperty(exports, "validarIdentificador", { enumerable: true, get: function () { return identificador_1.validarIdentificador; } });
 Object.defineProperty(exports, "identificadorAceptable", { enumerable: true, get: function () { return identificador_1.identificadorAceptable; } });
+// ─────────────────────────────────────────────────────────────────────────────
+// Tipo de documento de la ficha (`tipoIdentificador`) — vocabulario único
+// ─────────────────────────────────────────────────────────────────────────────
+// Lo que se GUARDA en pacientes y empresas, con la lista L7 de la AEAT para los
+// documentos extranjeros. `FormaIdentificador` (arriba) es otra cosa: lo que se
+// deduce del número cuando nadie ha elegido el tipo.
+var tipoDocumento_1 = require("./tipoDocumento");
+Object.defineProperty(exports, "TIPOS_IDENTIFICADOR", { enumerable: true, get: function () { return tipoDocumento_1.TIPOS_IDENTIFICADOR; } });
+Object.defineProperty(exports, "OPCIONES_TIPO_IDENTIFICADOR", { enumerable: true, get: function () { return tipoDocumento_1.OPCIONES_TIPO_IDENTIFICADOR; } });
+Object.defineProperty(exports, "PREFIJOS_NIF_IVA", { enumerable: true, get: function () { return tipoDocumento_1.PREFIJOS_NIF_IVA; } });
+Object.defineProperty(exports, "LARGO_MAXIMO_DOCUMENTO", { enumerable: true, get: function () { return tipoDocumento_1.LARGO_MAXIMO_DOCUMENTO; } });
+Object.defineProperty(exports, "esTipoIdentificador", { enumerable: true, get: function () { return tipoDocumento_1.esTipoIdentificador; } });
+Object.defineProperty(exports, "etiquetaTipoIdentificador", { enumerable: true, get: function () { return tipoDocumento_1.etiquetaTipoIdentificador; } });
+Object.defineProperty(exports, "idTypeAeatDe", { enumerable: true, get: function () { return tipoDocumento_1.idTypeAeatDe; } });
+Object.defineProperty(exports, "esNifEspanol", { enumerable: true, get: function () { return tipoDocumento_1.esNifEspanol; } });
+Object.defineProperty(exports, "opcionesTipoIdentificador", { enumerable: true, get: function () { return tipoDocumento_1.opcionesTipoIdentificador; } });
+Object.defineProperty(exports, "paisDeNifIva", { enumerable: true, get: function () { return tipoDocumento_1.paisDeNifIva; } });
+Object.defineProperty(exports, "normalizarDocumento", { enumerable: true, get: function () { return tipoDocumento_1.normalizarDocumento; } });
+Object.defineProperty(exports, "validarDocumento", { enumerable: true, get: function () { return tipoDocumento_1.validarDocumento; } });
+Object.defineProperty(exports, "tipoPorForma", { enumerable: true, get: function () { return tipoDocumento_1.tipoPorForma; } });
+Object.defineProperty(exports, "resolverDocumento", { enumerable: true, get: function () { return tipoDocumento_1.resolverDocumento; } });
+// ─────────────────────────────────────────────────────────────────────────────
+// País: nombre ↔ ISO 3166-1 alfa-2 (`direccion.pais` es texto; VERI*FACTU, ISO)
+// ─────────────────────────────────────────────────────────────────────────────
+var pais_1 = require("./pais");
+Object.defineProperty(exports, "PAISES_ISO", { enumerable: true, get: function () { return pais_1.PAISES_ISO; } });
+Object.defineProperty(exports, "codigoPaisDe", { enumerable: true, get: function () { return pais_1.codigoPaisDe; } });
+Object.defineProperty(exports, "nombrePaisDe", { enumerable: true, get: function () { return pais_1.nombrePaisDe; } });
+Object.defineProperty(exports, "esCodigoPais", { enumerable: true, get: function () { return pais_1.esCodigoPais; } });
 // ─────────────────────────────────────────────────────────────────────────────
 // Sexo (H / M / O) — codec único de la suite
 // ─────────────────────────────────────────────────────────────────────────────

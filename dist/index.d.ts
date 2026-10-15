@@ -19,6 +19,7 @@
  * por id) cuando el servidor local no responde — el caller decide si caer
  * a Cloud Functions o mostrar un error.
  */
+import type { TipoIdentificador } from './tipoDocumento';
 export interface ClienteDireccion {
     calle: string;
     codigoPostal: string;
@@ -36,7 +37,7 @@ export interface Cliente {
     tipo: 'PACIENTE' | 'EMPRESA';
     nif: string;
     nombreRazon: string;
-    tipoIdentificador?: 'DNI' | 'NIE' | 'PASAPORTE' | 'OTRO';
+    tipoIdentificador?: TipoIdentificador;
     email?: string;
     telefono?: string;
     prefijoTelefono?: string;
@@ -53,7 +54,7 @@ export interface RawPaciente {
     nombre?: string;
     apellidos?: string;
     nif?: string;
-    tipoIdentificador?: 'DNI' | 'NIE' | 'PASAPORTE' | 'OTRO';
+    tipoIdentificador?: TipoIdentificador;
     email?: string;
     telefono?: string;
     prefijoTelefono?: string | null;
@@ -77,6 +78,7 @@ export interface RawEmpresa {
     id: string;
     nombre?: string;
     cif?: string;
+    tipoIdentificador?: TipoIdentificador;
     contactos?: Array<{
         nombre?: string;
         departamento?: string;
@@ -181,7 +183,11 @@ export declare function localObtenerProfesional(profesionalId: string): Promise<
 export declare function localBuscarProfesionalPorUID(uid: string): Promise<IdentityProfesional | null | undefined>;
 export declare function localGetClinicConfig(): Promise<Record<string, unknown> | null>;
 export { normalizarIdentificador, canonizarIdentificador, tipoDeIdentificador, validarIdentificador, identificadorAceptable, } from './identificador';
-export type { TipoIdentificador, ResultadoValidacion } from './identificador';
+export type { FormaIdentificador, ResultadoValidacion } from './identificador';
+export { TIPOS_IDENTIFICADOR, OPCIONES_TIPO_IDENTIFICADOR, PREFIJOS_NIF_IVA, LARGO_MAXIMO_DOCUMENTO, esTipoIdentificador, etiquetaTipoIdentificador, idTypeAeatDe, esNifEspanol, opcionesTipoIdentificador, paisDeNifIva, normalizarDocumento, validarDocumento, tipoPorForma, resolverDocumento, } from './tipoDocumento';
+export type { TipoIdentificador, EntidadDocumento, IdTypeAeat, OpcionTipoIdentificador, ResultadoDocumento, ResolucionDocumento, } from './tipoDocumento';
+export { PAISES_ISO, codigoPaisDe, nombrePaisDe, esCodigoPais } from './pais';
+export type { PaisISO } from './pais';
 export { OPCIONES_SEXO, sexoADisplay, displayASexo, comoSexoIdentity, esHombre, esMujer, sexoDesdeExterno, } from './sexo';
 export type { SexoIdentity, SexoDisplay } from './sexo';
 export { comprimirParaIA, type ImagenParaIA } from './ui/imagen';

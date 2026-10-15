@@ -3,6 +3,8 @@ export type OrigenAltaServidor = 'salufirst' | 'sanacloud' | 'chatbot';
 /** Lo que admite la ficha canónica. Se normaliza en Identity, no aquí. */
 export interface DatosAltaServidor {
     nif: string;
+    /** Tipo del documento (`TIPOS_IDENTIFICADOR`). Sin él, lo dice la forma del número. */
+    tipoIdentificador?: string | null;
     nombre: string;
     apellidos: string;
     email?: string | null;

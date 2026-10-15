@@ -24,6 +24,8 @@
 // TIPOS
 // ═══════════════════════════════════════════════════════════════════════════
 
+import type { TipoIdentificador } from './tipoDocumento';
+
 export interface ClienteDireccion {
   calle: string;
   codigoPostal: string;
@@ -42,7 +44,7 @@ export interface Cliente {
   tipo: 'PACIENTE' | 'EMPRESA';
   nif: string;
   nombreRazon: string;
-  tipoIdentificador?: 'DNI' | 'NIE' | 'PASAPORTE' | 'OTRO';
+  tipoIdentificador?: TipoIdentificador;
   email?: string;
   telefono?: string;
   prefijoTelefono?: string;
@@ -60,7 +62,7 @@ export interface RawPaciente {
   nombre?: string;
   apellidos?: string;
   nif?: string;
-  tipoIdentificador?: 'DNI' | 'NIE' | 'PASAPORTE' | 'OTRO';
+  tipoIdentificador?: TipoIdentificador;
   email?: string;
   telefono?: string;
   prefijoTelefono?: string | null;
@@ -79,6 +81,7 @@ export interface RawEmpresa {
   id: string;
   nombre?: string;
   cif?: string;
+  tipoIdentificador?: TipoIdentificador;
   contactos?: Array<{ nombre?: string; departamento?: string; email?: string; telefono?: string; principal?: boolean }>;
   direccion?: { calle?: string; codigoPostal?: string; poblacion?: string; provincia?: string; pais?: string };
   clinicaIds?: string[];
@@ -391,6 +394,7 @@ export function mapEmpresaToCliente(e: RawEmpresa): Cliente {
     id: e.id,
     tipo: 'EMPRESA',
     nif: e.cif || '',
+    tipoIdentificador: e.tipoIdentificador,
     nombreRazon: e.nombre || '',
     email: contacto?.email || undefined,
     telefono: contacto?.telefono || undefined,
@@ -627,7 +631,7 @@ export async function localGetClinicConfig(): Promise<Record<string, unknown> | 
 
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Identificador personal (DNI / NIE / pasaporte / CIF)
+// Identificador personal (DNI / NIE / pasaporte / CIF): su FORMA
 // ─────────────────────────────────────────────────────────────────────────────
 export {
   normalizarIdentificador,
@@ -636,7 +640,44 @@ export {
   validarIdentificador,
   identificadorAceptable,
 } from './identificador';
-export type { TipoIdentificador, ResultadoValidacion } from './identificador';
+export type { FormaIdentificador, ResultadoValidacion } from './identificador';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Tipo de documento de la ficha (`tipoIdentificador`) — vocabulario único
+// ─────────────────────────────────────────────────────────────────────────────
+// Lo que se GUARDA en pacientes y empresas, con la lista L7 de la AEAT para los
+// documentos extranjeros. `FormaIdentificador` (arriba) es otra cosa: lo que se
+// deduce del número cuando nadie ha elegido el tipo.
+export {
+  TIPOS_IDENTIFICADOR,
+  OPCIONES_TIPO_IDENTIFICADOR,
+  PREFIJOS_NIF_IVA,
+  LARGO_MAXIMO_DOCUMENTO,
+  esTipoIdentificador,
+  etiquetaTipoIdentificador,
+  idTypeAeatDe,
+  esNifEspanol,
+  opcionesTipoIdentificador,
+  paisDeNifIva,
+  normalizarDocumento,
+  validarDocumento,
+  tipoPorForma,
+  resolverDocumento,
+} from './tipoDocumento';
+export type {
+  TipoIdentificador,
+  EntidadDocumento,
+  IdTypeAeat,
+  OpcionTipoIdentificador,
+  ResultadoDocumento,
+  ResolucionDocumento,
+} from './tipoDocumento';
+
+// ─────────────────────────────────────────────────────────────────────────────
+// País: nombre ↔ ISO 3166-1 alfa-2 (`direccion.pais` es texto; VERI*FACTU, ISO)
+// ─────────────────────────────────────────────────────────────────────────────
+export { PAISES_ISO, codigoPaisDe, nombrePaisDe, esCodigoPais } from './pais';
+export type { PaisISO } from './pais';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Sexo (H / M / O) — codec único de la suite

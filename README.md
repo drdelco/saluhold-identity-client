@@ -24,7 +24,7 @@ Con un solo sitio donde vive cada regla no hay convenio que traducir mal.
 
 | Entrada | Contenido | Dónde corre |
 |---|---|---|
-| `@saluhold/identity-client` | Codec del sexo, validación de DNI/NIE, cliente del servidor local | Navegador y servidor |
+| `@saluhold/identity-client` | Codec del sexo, validación de DNI/NIE, tipo de documento, país ↔ ISO, cliente del servidor local | Navegador y servidor |
 | `@saluhold/identity-client/ui` | Componentes React + Mantine: escáner de documentos, formulario de alta | Solo navegador |
 | `@saluhold/identity-client/servidor` | Reglas que tocan Firestore con el Admin SDK | Solo Cloud Functions |
 | `@saluhold/identity-client/correo` | `renderCorreo` y los tokens de marca de los correos de la suite | Navegador y servidor |
@@ -179,6 +179,56 @@ Corporativo, los PRO). En el plan Solo la clínica es el propio médico: se pasa
 y la variante A sale con su nombre en texto sobrio arriba, el acento de la app
 y sus datos en el pie. Sin «marca» que no tiene. Lo mismo en C: en Solo, el
 nombre en gris bajo el título; en PRO, el logo en la cabecera.
+
+## Tipo de documento y país (0.10.0)
+
+Para VERI*FACTU, un cliente sin NIF español se declara con `IDOtro`: su país
+(ISO 3166-1 alfa-2) y su IDType de la lista L7 de la AEAT. Las dos cosas son
+datos maestros y viven en Identity; aquí está su única regla.
+
+**`tipoIdentificador`** (`tipoDocumento.ts`) es el campo que ya tenían los
+pacientes y que ahora tienen también las empresas. Un solo vocabulario,
+`TIPOS_IDENTIFICADOR`:
+
+| Valor | L7 | Qué es |
+|---|---|---|
+| `DNI`, `NIE` | — | Documento español de una persona (va en `<NIF>`) |
+| `NIF` | — | NIF de empresa o entidad (el antiguo CIF) o NIF K/L/M |
+| `NIF_IVA` | 02 | NIF-IVA de otro Estado de la UE (prefijo + número; ni ES ni GB) |
+| `PASAPORTE` | 03 | Pasaporte |
+| `DOCUMENTO_PAIS` | 04 | Documento oficial de identificación del país de residencia |
+| `CERTIFICADO_RESIDENCIA` | 05 | Certificado de residencia |
+| `OTRO_DOCUMENTO` | 06 | Otro documento probatorio |
+| `NO_CENSADO` | 07 | DNI/NIE de una persona no censada en la AEAT |
+| `OTRO` | — | De antes: sin especificar. No se elige; se concreta |
+| `PROVISIONAL` | — | Ficha sin documento (`PEND-n`). Lo pone el servidor |
+
+- `OPCIONES_TIPO_IDENTIFICADOR` lleva la etiqueta y la ayuda de cada valor para
+  un administrativo; `opcionesTipoIdentificador(entidad, actual)` las da en
+  forma de Mantine (`value`, `label`, `description`), sin `OTRO` ni
+  `PROVISIONAL` salvo que sean el valor guardado.
+- `validarDocumento(tipo, valor)`: DNI, NIE, NIF y no censado con su carácter
+  de control; NIF-IVA con la estructura de su país (la tabla de las
+  Validaciones de la AEAT, sin consultar el VIES); el resto, de 3 a 20 letras o
+  cifras (el máximo del ID de `IDOtro`).
+- `resolverDocumento({ entidad, valor, tipo, tipoActual })` es lo que aplican el
+  alta y la edición canónicas de Identity: con tipo elegido, valida contra él;
+  sin tipo, manda la forma española (DNI, NIE, NIF, provisional); si no es
+  española, se conserva el tipo guardado si el número lo cumple, y si no, un
+  paciente queda como pasaporte (como siempre) y una empresa obliga a elegirlo.
+- `idTypeAeatDe(tipo)` y `esNifEspanol(tipo)`, para quien declara a la AEAT.
+
+`TipoIdentificador` es ahora ese vocabulario. Lo que se deduce del número sin
+elegir nada (`tipoDeIdentificador`) se llama `FormaIdentificador`.
+
+**País** (`pais.ts`): Identity guarda el país como texto en `direccion.pais`
+(«España», lo que pinta el selector) y así sigue. `codigoPaisDe(texto)` lo
+traduce a ISO en la frontera (castellano con o sin tildes, mayúsculas, inglés,
+alias como «Holanda» o «EE. UU.», y los propios códigos) y devuelve `null` si
+no lo reconoce: nunca supone España. `nombrePaisDe(codigo)` hace lo contrario.
+`PAISES_ISO`: los 249 países de la ISO 3166-1 más Kosovo (XK), con el nombre
+que escriben los selectores de la suite. La tabla está escrita, no se calcula
+con `Intl.DisplayNames`, para que dé lo mismo en cualquier motor.
 
 ## Traducir la interfaz
 

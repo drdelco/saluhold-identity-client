@@ -34,7 +34,13 @@ const LETRAS_CONTROL = 'TRWAGMYFPDXBNJZSQVHLCKE';
 /** Primera letra del NIE y su valor numérico. */
 const PREFIJO_NIE: Record<string, string> = { X: '0', Y: '1', Z: '2' };
 
-export type TipoIdentificador = 'DNI' | 'NIE' | 'PASAPORTE' | 'CIF' | 'PROVISIONAL' | 'OTRO';
+/**
+ * La FORMA del valor, deducida de él. No es el tipo de documento que se guarda
+ * en la ficha (`tipoIdentificador`): ese es `TipoIdentificador`, de
+ * `tipoDocumento.ts`, y lo elige una persona cuando la forma no basta (un
+ * pasaporte y un documento de otro país pueden escribirse igual).
+ */
+export type FormaIdentificador = 'DNI' | 'NIE' | 'PASAPORTE' | 'CIF' | 'PROVISIONAL' | 'OTRO';
 
 export type ResultadoValidacion =
   /** DNI o NIE con letra de control correcta. */
@@ -42,7 +48,7 @@ export type ResultadoValidacion =
   /** DNI o NIE cuya letra NO corresponde al número: hay una errata. */
   | { estado: 'invalido'; tipo: 'DNI' | 'NIE'; normalizado: string; letraEsperada: string; mensaje: string }
   /** No es comprobable (pasaporte, CIF, provisional, vacío): NO es un error. */
-  | { estado: 'no-aplica'; tipo: TipoIdentificador; normalizado: string };
+  | { estado: 'no-aplica'; tipo: FormaIdentificador; normalizado: string };
 
 /** Mayúsculas y sin separadores. Es la forma en la que se ALMACENA. */
 export function normalizarIdentificador(valor: string | null | undefined): string {
@@ -61,7 +67,7 @@ export function normalizarIdentificador(valor: string | null | undefined): strin
  * con lo que se libraría de la validación justo en el caso en que más falta
  * hace. El padding es parte de reconocerlo, no un adorno de presentación.
  */
-export function tipoDeIdentificador(valor: string | null | undefined): TipoIdentificador {
+export function tipoDeIdentificador(valor: string | null | undefined): FormaIdentificador {
   const v = canonizarIdentificador(valor);
   if (!v) return 'OTRO';
   if (/^PEND-?\d+$/.test(v)) return 'PROVISIONAL';
