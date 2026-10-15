@@ -29,9 +29,25 @@
  *   CERTIFICADO_RESIDENCIA  05   certificado de residencia
  *   OTRO_DOCUMENTO          06   otro documento probatorio
  *   NO_CENSADO              07   NIF de una persona física no censada en la AEAT
+ *   SIN_IDENTIFICADOR       —    empresa de fuera de la UE que no tiene ningún
+ *                                número fiscal (solo empresas). Lo que haya en
+ *                                `cif` es una referencia interna, no un documento
  *   OTRO                    —    de antes: tipo sin especificar. No se elige; para
  *                                facturar hay que concretarlo
- *   PROVISIONAL             —    ficha sin documento (`PEND-n`). Lo pone el servidor
+ *   PENDIENTE               —    falta el documento: ficha sin documento (`PEND-n`)
+ *                                o con un número que no cuadra y hay que pedir el
+ *                                bueno. No se elige: lo pone el servidor
+ *
+ * SIN_IDENTIFICADOR y la AEAT (Validaciones VERI*FACTU v1.2.2, §13 Destinatarios;
+ * diseño de registro, bloque IDOtro): en una factura completa (F1, F3, R1-R4) el
+ * destinatario es obligatorio y va con <NIF> o con <IDOtro>, y en IDOtro el ID
+ * (alfanumérico de hasta 20) es obligatorio. No hay forma de declarar un
+ * destinatario sin número: el 07 «no censado» es para un NIF ESPAÑOL correcto
+ * que no está en el censo (con CodigoPais ES), no para quien no tiene número.
+ * Una empresa SIN_IDENTIFICADOR solo puede ser destinataria de una factura
+ * simplificada (F2, sin destinatario) dentro de sus límites, o hay que pedirle
+ * un documento (su registro mercantil, un certificado de residencia…) y
+ * declararla con 06 u 05. Por eso `idTypeAeat` es null.
  *
  * No hay un «CIF» aparte: desde 2008 es un NIF (RD 1065/2007) y SaluFact ya lo
  * espera como NIF. La forma de CIF se sigue reconociendo, y se comprueba su
@@ -55,8 +71,9 @@ export const TIPOS_IDENTIFICADOR = [
     'CERTIFICADO_RESIDENCIA',
     'OTRO_DOCUMENTO',
     'NO_CENSADO',
+    'SIN_IDENTIFICADOR',
     'OTRO',
-    'PROVISIONAL',
+    'PENDIENTE',
 ];
 const AMBAS = ['paciente', 'empresa'];
 /** En el orden en que se ofrecen: lo español primero, lo frecuente antes. */
@@ -70,8 +87,9 @@ export const OPCIONES_TIPO_IDENTIFICADOR = [
     { valor: 'CERTIFICADO_RESIDENCIA', etiqueta: 'Certificado de residencia', ayuda: 'Certificado de residencia fiscal expedido por su país.', idTypeAeat: '05', elegible: true, para: AMBAS },
     { valor: 'OTRO_DOCUMENTO', etiqueta: 'Otro documento acreditativo', ayuda: 'Cualquier otro documento que acredite su identidad (p. ej. el número fiscal de una empresa de fuera de la UE).', idTypeAeat: '06', elegible: true, para: AMBAS },
     { valor: 'NO_CENSADO', etiqueta: 'NIF no censado en Hacienda', ayuda: 'Persona con DNI o NIE español que no está dada de alta en el censo de la AEAT.', idTypeAeat: '07', elegible: true, para: AMBAS },
+    { valor: 'SIN_IDENTIFICADOR', etiqueta: 'Sin identificador (empresa extranjera)', ayuda: 'Empresa de fuera de la UE que no tiene ningún número fiscal. Hacienda exige un número para el destinatario de una factura completa: sin él, solo factura simplificada.', idTypeAeat: null, elegible: true, para: ['empresa'] },
     { valor: 'OTRO', etiqueta: 'Otro (sin especificar)', ayuda: 'Tipo sin concretar, de antes. Para facturar hay que elegir uno de la lista.', idTypeAeat: null, elegible: false, para: AMBAS },
-    { valor: 'PROVISIONAL', etiqueta: 'Provisional (sin documento)', ayuda: 'Ficha creada sin documento. Se completa escribiendo su documento.', idTypeAeat: null, elegible: false, para: ['paciente'] },
+    { valor: 'PENDIENTE', etiqueta: 'Pendiente (falta el documento)', ayuda: 'Ficha sin documento o con un número que no cuadra. Se completa escribiendo el documento correcto y eligiendo su tipo.', idTypeAeat: null, elegible: false, para: AMBAS },
 ];
 const POR_VALOR = new Map(OPCIONES_TIPO_IDENTIFICADOR.map((o) => [o.valor, o]));
 /** ¿Es uno de los valores del vocabulario? (mayúsculas exactas, como se guarda) */
@@ -84,7 +102,7 @@ export function etiquetaTipoIdentificador(valor) {
         return '';
     return POR_VALOR.get(valor)?.etiqueta ?? valor;
 }
-/** IDType de la AEAT de un valor guardado (null: NIF español, OTRO, PROVISIONAL o desconocido). */
+/** IDType de la AEAT de un valor guardado (null: NIF español, OTRO, PENDIENTE, SIN_IDENTIFICADOR o desconocido). */
 export function idTypeAeatDe(valor) {
     return (valor && POR_VALOR.get(valor)?.idTypeAeat) || null;
 }
@@ -95,7 +113,7 @@ export function esNifEspanol(valor) {
 /**
  * Las opciones de un selector, en la forma de Mantine (`value`, `label`,
  * `description`). Solo las elegibles para esa ficha y, si el valor actual no lo
- * es (OTRO, PROVISIONAL), también él: un selector que no puede enseñar lo que
+ * es (OTRO, PENDIENTE), también él: un selector que no puede enseñar lo que
  * hay guardado lo «cambia» al abrirse.
  */
 export function opcionesTipoIdentificador(entidad, actual) {
@@ -214,7 +232,9 @@ export function normalizarDocumento(tipo, valor) {
  *  - DNI, NIE, NIF (entidad o K/L/M) y NO_CENSADO: con su carácter de control.
  *  - NIF_IVA: prefijo de un Estado de la UE (no ES; GB solo como XI) y la
  *    estructura de ese país.
- *  - PROVISIONAL: solo un `PEND-n`.
+ *  - PENDIENTE: un `PEND-n` o el número que hay que corregir (hasta 20).
+ *  - SIN_IDENTIFICADOR: sin número, o una referencia interna (hasta 20) que no
+ *    se declara a nadie.
  *  - El resto (pasaporte, documento del país, certificado, otro documento,
  *    OTRO): libre, de 3 a 20 letras o cifras.
  */
@@ -222,6 +242,11 @@ export function validarDocumento(tipo, valor) {
     const normalizado = normalizarDocumento(tipo, valor);
     const mal = (mensaje) => ({ valido: false, tipo, normalizado, mensaje });
     const bien = { valido: true, tipo, normalizado };
+    if (tipo === 'SIN_IDENTIFICADOR') {
+        return normalizado.length > LARGO_MAXIMO_DOCUMENTO
+            ? mal(`La referencia de una empresa sin identificador no puede pasar de ${LARGO_MAXIMO_DOCUMENTO} letras o cifras.`)
+            : bien;
+    }
     if (!normalizado)
         return mal('Falta el número del documento.');
     switch (tipo) {
@@ -269,9 +294,9 @@ export function validarDocumento(tipo, valor) {
             }
             return bien;
         }
-        case 'PROVISIONAL':
-            return /^PEND-\d+$/.test(normalizado) ? bien
-                : mal('«Provisional» es solo para fichas sin documento: elija el tipo del documento que va a escribir.');
+        case 'PENDIENTE':
+            return normalizado.length <= LARGO_MAXIMO_DOCUMENTO ? bien
+                : mal(`El número del documento no puede pasar de ${LARGO_MAXIMO_DOCUMENTO} letras o cifras.`);
         default: {
             if (normalizado.length < LARGO_MINIMO_DOCUMENTO || normalizado.length > LARGO_MAXIMO_DOCUMENTO) {
                 return mal(`El número del documento tiene que tener entre ${LARGO_MINIMO_DOCUMENTO} y ${LARGO_MAXIMO_DOCUMENTO} letras o cifras.`);
@@ -291,7 +316,7 @@ export function tipoPorForma(valor) {
     if (!v)
         return null;
     if (/^PEND-?\d+$/.test(v))
-        return 'PROVISIONAL';
+        return 'PENDIENTE';
     if (/^\d{8}[A-Z]$/.test(v))
         return 'DNI';
     if (/^[XYZ]\d{7}[A-Z]$/.test(v))
@@ -304,19 +329,29 @@ export function tipoPorForma(valor) {
 }
 /** Tipos cuyo número no deja deducir el tipo: si ya está guardado uno de estos, se conserva. */
 const TIPOS_NO_DEDUCIBLES = [
-    'NIF_IVA', 'PASAPORTE', 'DOCUMENTO_PAIS', 'CERTIFICADO_RESIDENCIA', 'OTRO_DOCUMENTO', 'OTRO',
+    'NIF_IVA', 'PASAPORTE', 'DOCUMENTO_PAIS', 'CERTIFICADO_RESIDENCIA', 'OTRO_DOCUMENTO', 'SIN_IDENTIFICADOR', 'OTRO',
 ];
+/** El tipo de un número español con su control correcto (DNI, NIE, NIF); null si no lo es. */
+function tipoEspanolValido(valor) {
+    const t = tipoPorForma(valor);
+    if (t !== 'DNI' && t !== 'NIE' && t !== 'NIF')
+        return null;
+    return validarDocumento(t, valor).valido ? t : null;
+}
 /**
  * EL tipo y el número que se guardan, a partir de lo que llega. Lo usan el alta
  * y la edición canónicas de Identity (pacientes y empresas).
  *
  *  - Con tipo elegido: tiene que ser del vocabulario, valer para esa ficha y
- *    cuadrar con el número. OTRO solo se admite si ya era el guardado (no se
- *    elige: se concreta), y PROVISIONAL solo con un `PEND-n`.
+ *    cuadrar con el número. OTRO y PENDIENTE solo se admiten si ya eran el
+ *    guardado (no se eligen: se concretan). Con PENDIENTE, si el número ya es
+ *    un DNI, NIE o NIF correcto, pasa a ese tipo; si no, sigue PENDIENTE con
+ *    el número que tenga (es lo que hay que corregir cuando venga).
  *  - Sin tipo elegido: lo dice la forma si es española (DNI, NIE, NIF,
  *    provisional); si no, se conserva el tipo guardado si es de los que la
  *    forma no deja deducir y el número lo cumple; si tampoco, un paciente queda
  *    como PASAPORTE (lo que se ha hecho siempre) y una empresa obliga a elegir.
+ *    Un `PEND-n` es PENDIENTE (solo en pacientes).
  */
 export function resolverDocumento(entrada) {
     const { entidad, valor } = entrada;
@@ -332,11 +367,22 @@ export function resolverDocumento(entrada) {
         if (pedido === 'OTRO' && actual !== 'OTRO') {
             return { ok: false, mensaje: 'Elija el tipo concreto del documento (pasaporte, documento de su país…).' };
         }
+        if (pedido === 'PENDIENTE') {
+            const pend = tipoPorForma(valor) === 'PENDIENTE';
+            if (pend && entidad === 'empresa')
+                return { ok: false, mensaje: 'Una empresa no puede tener un número provisional.' };
+            if (actual !== 'PENDIENTE' && !pend) {
+                return { ok: false, mensaje: 'Elija el tipo del documento (DNI, NIE, pasaporte…).' };
+            }
+            const espanol = tipoEspanolValido(valor);
+            if (espanol)
+                return { ok: true, tipo: espanol, normalizado: normalizarDocumento(espanol, valor) };
+        }
         const r = validarDocumento(pedido, valor);
         return r.valido ? { ok: true, tipo: pedido, normalizado: r.normalizado } : { ok: false, mensaje: r.mensaje };
     }
     const porForma = tipoPorForma(valor);
-    if (porForma === 'PROVISIONAL' && entidad === 'empresa') {
+    if (porForma === 'PENDIENTE' && entidad === 'empresa') {
         return { ok: false, mensaje: 'Una empresa no puede tener un número provisional.' };
     }
     if (porForma) {

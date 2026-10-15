@@ -35,17 +35,20 @@ test('una opción por valor, con etiqueta y ayuda en castellano', () => {
   assert.equal(etiquetaTipoIdentificador(null), '');
   assert.ok(esTipoIdentificador('PASAPORTE'));
   assert.ok(!esTipoIdentificador('pasaporte'));
-  assert.ok(!esTipoIdentificador('PENDIENTE'));
+  assert.ok(esTipoIdentificador('PENDIENTE'));
+  assert.ok(!esTipoIdentificador('PROVISIONAL'));
 });
 
-test('el selector no ofrece OTRO ni PROVISIONAL, pero enseña el que ya está', () => {
+test('el selector no ofrece OTRO ni PENDIENTE, pero enseña el que ya está', () => {
   const valores = (xs) => xs.map((x) => x.value);
   assert.ok(!valores(opcionesTipoIdentificador('paciente')).includes('OTRO'));
-  assert.ok(!valores(opcionesTipoIdentificador('paciente')).includes('PROVISIONAL'));
+  assert.ok(!valores(opcionesTipoIdentificador('paciente')).includes('PENDIENTE'));
   assert.ok(valores(opcionesTipoIdentificador('paciente', 'OTRO')).includes('OTRO'));
-  assert.ok(valores(opcionesTipoIdentificador('paciente', 'PROVISIONAL')).includes('PROVISIONAL'));
-  // Una empresa no puede ser provisional.
-  assert.ok(!valores(opcionesTipoIdentificador('empresa', 'PROVISIONAL')).includes('PROVISIONAL'));
+  assert.ok(valores(opcionesTipoIdentificador('paciente', 'PENDIENTE')).includes('PENDIENTE'));
+  assert.ok(valores(opcionesTipoIdentificador('empresa', 'PENDIENTE')).includes('PENDIENTE'));
+  // «Sin identificador» se ofrece a una empresa y nunca a un paciente.
+  assert.ok(valores(opcionesTipoIdentificador('empresa')).includes('SIN_IDENTIFICADOR'));
+  assert.ok(!valores(opcionesTipoIdentificador('paciente', 'SIN_IDENTIFICADOR')).includes('SIN_IDENTIFICADOR'));
   assert.equal(opcionesTipoIdentificador('empresa')[0].value, 'DNI');
   assert.ok(opcionesTipoIdentificador('empresa').every((o) => o.label && o.description));
 });
@@ -122,9 +125,20 @@ test('documentos extranjeros: libres, de 3 a 20 letras o cifras', () => {
   }
 });
 
-test('provisional: solo PEND-n', () => {
-  assert.ok(valido('PROVISIONAL', 'PEND-9001'));
-  assert.ok(!valido('PROVISIONAL', '12345678Z'));
+test('pendiente: PEND-n o el número que hay que corregir', () => {
+  assert.ok(valido('PENDIENTE', 'PEND-9001'));
+  assert.ok(valido('PENDIENTE', '12345678A'));
+  assert.ok(!valido('PENDIENTE', ''));
+  assert.ok(!valido('PENDIENTE', 'A'.repeat(21)));
+});
+
+test('sin identificador: vacío o una referencia interna, nunca un documento declarable', () => {
+  assert.ok(valido('SIN_IDENTIFICADOR', ''));
+  assert.ok(valido('SIN_IDENTIFICADOR', null));
+  assert.ok(valido('SIN_IDENTIFICADOR', 'ACME INC'));
+  assert.ok(!valido('SIN_IDENTIFICADOR', 'A'.repeat(21)));
+  assert.equal(idTypeAeatDe('SIN_IDENTIFICADOR'), null);
+  assert.equal(esNifEspanol('SIN_IDENTIFICADOR'), false);
 });
 
 test('el tipo por la forma: solo lo español; lo demás no se adivina', () => {
@@ -133,7 +147,7 @@ test('el tipo por la forma: solo lo español; lo demás no se adivina', () => {
   assert.equal(tipoPorForma('X1234567L'), 'NIE');
   assert.equal(tipoPorForma('B12345674'), 'NIF');
   assert.equal(tipoPorForma('K1234567L'), 'NIF');
-  assert.equal(tipoPorForma('PEND-9001'), 'PROVISIONAL');
+  assert.equal(tipoPorForma('PEND-9001'), 'PENDIENTE');
   assert.equal(tipoPorForma('FR12345678901'), null);
   assert.equal(tipoPorForma('AB123456'), null);
   assert.equal(tipoPorForma(''), null);
@@ -149,8 +163,11 @@ test('resolver con tipo elegido: valida contra ese tipo', () => {
   assert.equal(resolverDocumento({ entidad: 'empresa', valor: 'FR12345678901', tipo: 'nif_iva' }).tipo, 'NIF_IVA');
   assert.equal(resolverDocumento({ entidad: 'empresa', valor: 'B12345675', tipo: 'NIF' }).ok, false);
   assert.match(resolverDocumento({ entidad: 'paciente', valor: 'AB123', tipo: 'CIF' }).mensaje, /no es válido/);
-  assert.match(resolverDocumento({ entidad: 'paciente', valor: 'AB123', tipo: 'PENDIENTE' }).mensaje, /no es válido/);
-  assert.equal(resolverDocumento({ entidad: 'empresa', valor: 'PEND-1', tipo: 'PROVISIONAL' }).ok, false);
+  assert.match(resolverDocumento({ entidad: 'paciente', valor: 'AB123', tipo: 'PROVISIONAL' }).mensaje, /no es válido/);
+  assert.equal(resolverDocumento({ entidad: 'empresa', valor: 'PEND-1', tipo: 'PENDIENTE' }).ok, false);
+  assert.match(resolverDocumento({ entidad: 'paciente', valor: 'AB123', tipo: 'SIN_IDENTIFICADOR' }).mensaje, /no es un tipo de documento/);
+  assert.deepEqual(resolverDocumento({ entidad: 'empresa', valor: '', tipo: 'SIN_IDENTIFICADOR' }), { ok: true, tipo: 'SIN_IDENTIFICADOR', normalizado: '' });
+  assert.equal(resolverDocumento({ entidad: 'empresa', valor: '', tipoActual: 'SIN_IDENTIFICADOR' }).tipo, 'SIN_IDENTIFICADOR');
 });
 
 test('OTRO no se elige: solo se conserva si ya estaba', () => {
@@ -158,11 +175,23 @@ test('OTRO no se elige: solo se conserva si ya estaba', () => {
   assert.equal(resolverDocumento({ entidad: 'paciente', valor: 'AB123456', tipo: 'OTRO', tipoActual: 'OTRO' }).ok, true);
 });
 
+test('PENDIENTE no se elige: se conserva con el número a corregir y sale en cuanto el número es bueno', () => {
+  // Ficha con un DNI que no cuadra: se puede guardar el teléfono sin tocar el documento.
+  assert.deepEqual(resolverDocumento({ entidad: 'paciente', valor: '12345678A', tipo: 'PENDIENTE', tipoActual: 'PENDIENTE' }),
+    { ok: true, tipo: 'PENDIENTE', normalizado: '12345678A' });
+  // Se corrige el número sin cambiar el selector: pasa a su tipo.
+  assert.equal(resolverDocumento({ entidad: 'paciente', valor: '12345678Z', tipo: 'PENDIENTE', tipoActual: 'PENDIENTE' }).tipo, 'DNI');
+  assert.equal(resolverDocumento({ entidad: 'empresa', valor: 'B12345674', tipo: 'PENDIENTE', tipoActual: 'PENDIENTE' }).tipo, 'NIF');
+  assert.equal(resolverDocumento({ entidad: 'paciente', valor: 'PEND-9001', tipo: 'PENDIENTE' }).tipo, 'PENDIENTE');
+  // No se elige para un número de verdad.
+  assert.equal(resolverDocumento({ entidad: 'paciente', valor: 'AB123456', tipo: 'PENDIENTE', tipoActual: 'PASAPORTE' }).ok, false);
+});
+
 test('resolver sin tipo: la forma española manda', () => {
   assert.deepEqual(resolverDocumento({ entidad: 'paciente', valor: '5004388w', tipoActual: 'PASAPORTE' }),
     { ok: true, tipo: 'DNI', normalizado: '05004388W' });
   assert.equal(resolverDocumento({ entidad: 'paciente', valor: '12345678A' }).ok, false);
-  assert.equal(resolverDocumento({ entidad: 'paciente', valor: 'PEND-9001' }).tipo, 'PROVISIONAL');
+  assert.equal(resolverDocumento({ entidad: 'paciente', valor: 'PEND-9001' }).tipo, 'PENDIENTE');
   assert.equal(resolverDocumento({ entidad: 'empresa', valor: 'PEND-9001' }).ok, false);
   assert.equal(resolverDocumento({ entidad: 'empresa', valor: 'b12345674' }).tipo, 'NIF');
 });

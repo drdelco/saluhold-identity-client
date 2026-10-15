@@ -29,9 +29,25 @@
  *   CERTIFICADO_RESIDENCIA  05   certificado de residencia
  *   OTRO_DOCUMENTO          06   otro documento probatorio
  *   NO_CENSADO              07   NIF de una persona física no censada en la AEAT
+ *   SIN_IDENTIFICADOR       —    empresa de fuera de la UE que no tiene ningún
+ *                                número fiscal (solo empresas). Lo que haya en
+ *                                `cif` es una referencia interna, no un documento
  *   OTRO                    —    de antes: tipo sin especificar. No se elige; para
  *                                facturar hay que concretarlo
- *   PROVISIONAL             —    ficha sin documento (`PEND-n`). Lo pone el servidor
+ *   PENDIENTE               —    falta el documento: ficha sin documento (`PEND-n`)
+ *                                o con un número que no cuadra y hay que pedir el
+ *                                bueno. No se elige: lo pone el servidor
+ *
+ * SIN_IDENTIFICADOR y la AEAT (Validaciones VERI*FACTU v1.2.2, §13 Destinatarios;
+ * diseño de registro, bloque IDOtro): en una factura completa (F1, F3, R1-R4) el
+ * destinatario es obligatorio y va con <NIF> o con <IDOtro>, y en IDOtro el ID
+ * (alfanumérico de hasta 20) es obligatorio. No hay forma de declarar un
+ * destinatario sin número: el 07 «no censado» es para un NIF ESPAÑOL correcto
+ * que no está en el censo (con CodigoPais ES), no para quien no tiene número.
+ * Una empresa SIN_IDENTIFICADOR solo puede ser destinataria de una factura
+ * simplificada (F2, sin destinatario) dentro de sus límites, o hay que pedirle
+ * un documento (su registro mercantil, un certificado de residencia…) y
+ * declararla con 06 u 05. Por eso `idTypeAeat` es null.
  *
  * No hay un «CIF» aparte: desde 2008 es un NIF (RD 1065/2007) y SaluFact ya lo
  * espera como NIF. La forma de CIF se sigue reconociendo, y se comprueba su
@@ -44,7 +60,7 @@
  * `verificar-paridad-identificador.cjs`: no puede divergir.
  */
 /** Los valores que se guardan en `tipoIdentificador`. Ninguno más. */
-export declare const TIPOS_IDENTIFICADOR: readonly ["DNI", "NIE", "NIF", "NIF_IVA", "PASAPORTE", "DOCUMENTO_PAIS", "CERTIFICADO_RESIDENCIA", "OTRO_DOCUMENTO", "NO_CENSADO", "OTRO", "PROVISIONAL"];
+export declare const TIPOS_IDENTIFICADOR: readonly ["DNI", "NIE", "NIF", "NIF_IVA", "PASAPORTE", "DOCUMENTO_PAIS", "CERTIFICADO_RESIDENCIA", "OTRO_DOCUMENTO", "NO_CENSADO", "SIN_IDENTIFICADOR", "OTRO", "PENDIENTE"];
 export type TipoIdentificador = (typeof TIPOS_IDENTIFICADOR)[number];
 /** Ficha a la que pertenece el documento: no todo tipo vale para todo. */
 export type EntidadDocumento = 'paciente' | 'empresa';
@@ -58,7 +74,7 @@ export interface OpcionTipoIdentificador {
     ayuda: string;
     /** IDType de la AEAT; null si va como NIF español o no se puede declarar. */
     idTypeAeat: IdTypeAeat | null;
-    /** Se ofrece en el selector. OTRO y PROVISIONAL no: solo se enseñan si ya están. */
+    /** Se ofrece en el selector. OTRO y PENDIENTE no: solo se enseñan si ya están. */
     elegible: boolean;
     /** Fichas en las que tiene sentido. */
     para: readonly EntidadDocumento[];
@@ -69,14 +85,14 @@ export declare const OPCIONES_TIPO_IDENTIFICADOR: readonly OpcionTipoIdentificad
 export declare function esTipoIdentificador(valor: unknown): valor is TipoIdentificador;
 /** Etiqueta para pintar un valor guardado; el propio valor si no es del vocabulario. */
 export declare function etiquetaTipoIdentificador(valor: string | null | undefined): string;
-/** IDType de la AEAT de un valor guardado (null: NIF español, OTRO, PROVISIONAL o desconocido). */
+/** IDType de la AEAT de un valor guardado (null: NIF español, OTRO, PENDIENTE, SIN_IDENTIFICADOR o desconocido). */
 export declare function idTypeAeatDe(valor: string | null | undefined): IdTypeAeat | null;
 /** ¿Se declara en <NIF> (documento español con NIF censado)? */
 export declare function esNifEspanol(valor: string | null | undefined): boolean;
 /**
  * Las opciones de un selector, en la forma de Mantine (`value`, `label`,
  * `description`). Solo las elegibles para esa ficha y, si el valor actual no lo
- * es (OTRO, PROVISIONAL), también él: un selector que no puede enseñar lo que
+ * es (OTRO, PENDIENTE), también él: un selector que no puede enseñar lo que
  * hay guardado lo «cambia» al abrirse.
  */
 export declare function opcionesTipoIdentificador(entidad: EntidadDocumento, actual?: string | null): {
@@ -108,7 +124,9 @@ export declare function normalizarDocumento(tipo: TipoIdentificador, valor: stri
  *  - DNI, NIE, NIF (entidad o K/L/M) y NO_CENSADO: con su carácter de control.
  *  - NIF_IVA: prefijo de un Estado de la UE (no ES; GB solo como XI) y la
  *    estructura de ese país.
- *  - PROVISIONAL: solo un `PEND-n`.
+ *  - PENDIENTE: un `PEND-n` o el número que hay que corregir (hasta 20).
+ *  - SIN_IDENTIFICADOR: sin número, o una referencia interna (hasta 20) que no
+ *    se declara a nadie.
  *  - El resto (pasaporte, documento del país, certificado, otro documento,
  *    OTRO): libre, de 3 a 20 letras o cifras.
  */
@@ -131,12 +149,15 @@ export type ResolucionDocumento = {
  * y la edición canónicas de Identity (pacientes y empresas).
  *
  *  - Con tipo elegido: tiene que ser del vocabulario, valer para esa ficha y
- *    cuadrar con el número. OTRO solo se admite si ya era el guardado (no se
- *    elige: se concreta), y PROVISIONAL solo con un `PEND-n`.
+ *    cuadrar con el número. OTRO y PENDIENTE solo se admiten si ya eran el
+ *    guardado (no se eligen: se concretan). Con PENDIENTE, si el número ya es
+ *    un DNI, NIE o NIF correcto, pasa a ese tipo; si no, sigue PENDIENTE con
+ *    el número que tenga (es lo que hay que corregir cuando venga).
  *  - Sin tipo elegido: lo dice la forma si es española (DNI, NIE, NIF,
  *    provisional); si no, se conserva el tipo guardado si es de los que la
  *    forma no deja deducir y el número lo cumple; si tampoco, un paciente queda
  *    como PASAPORTE (lo que se ha hecho siempre) y una empresa obliga a elegir.
+ *    Un `PEND-n` es PENDIENTE (solo en pacientes).
  */
 export declare function resolverDocumento(entrada: {
     entidad: EntidadDocumento;

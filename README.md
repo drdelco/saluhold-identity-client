@@ -200,23 +200,34 @@ pacientes y que ahora tienen también las empresas. Un solo vocabulario,
 | `CERTIFICADO_RESIDENCIA` | 05 | Certificado de residencia |
 | `OTRO_DOCUMENTO` | 06 | Otro documento probatorio |
 | `NO_CENSADO` | 07 | DNI/NIE de una persona no censada en la AEAT |
+| `SIN_IDENTIFICADOR` | — | Empresa de fuera de la UE sin ningún número fiscal (solo empresas; 0.10.1) |
 | `OTRO` | — | De antes: sin especificar. No se elige; se concreta |
-| `PROVISIONAL` | — | Ficha sin documento (`PEND-n`). Lo pone el servidor |
+| `PENDIENTE` | — | Falta el documento: `PEND-n` o un número que no cuadra y hay que pedir el bueno. No se elige (0.10.1; en 0.10.0 se llamaba `PROVISIONAL`) |
 
 - `OPCIONES_TIPO_IDENTIFICADOR` lleva la etiqueta y la ayuda de cada valor para
   un administrativo; `opcionesTipoIdentificador(entidad, actual)` las da en
   forma de Mantine (`value`, `label`, `description`), sin `OTRO` ni
-  `PROVISIONAL` salvo que sean el valor guardado.
+  `PENDIENTE` salvo que sean el valor guardado.
 - `validarDocumento(tipo, valor)`: DNI, NIE, NIF y no censado con su carácter
   de control; NIF-IVA con la estructura de su país (la tabla de las
   Validaciones de la AEAT, sin consultar el VIES); el resto, de 3 a 20 letras o
   cifras (el máximo del ID de `IDOtro`).
 - `resolverDocumento({ entidad, valor, tipo, tipoActual })` es lo que aplican el
   alta y la edición canónicas de Identity: con tipo elegido, valida contra él;
-  sin tipo, manda la forma española (DNI, NIE, NIF, provisional); si no es
+  sin tipo, manda la forma española (DNI, NIE, NIF, `PEND-n` → pendiente); si no es
   española, se conserva el tipo guardado si el número lo cumple, y si no, un
   paciente queda como pasaporte (como siempre) y una empresa obliga a elegirlo.
 - `idTypeAeatDe(tipo)` y `esNifEspanol(tipo)`, para quien declara a la AEAT.
+- `PENDIENTE` elegido con la ficha ya pendiente se conserva con el número que
+  tenga (se puede guardar el teléfono sin arreglar el documento) y pasa solo a
+  DNI, NIE o NIF en cuanto el número es uno correcto.
+- `SIN_IDENTIFICADOR`: la AEAT **no** admite un destinatario sin número en una
+  factura completa (F1, F3, R1-R4: `Destinatarios` obligatorio, con `<NIF>` o
+  `<IDOtro>`, y en `IDOtro` el `ID` es obligatorio; el 07 «no censado» es
+  para un NIF español correcto, con `CodigoPais` ES). A esa empresa solo se le
+  puede hacer una factura simplificada (F2) dentro de sus límites, o hay que
+  pedirle un documento y declararla con 05 o 06. `idTypeAeatDe` da null. Lo que
+  haya en `cif` es una referencia interna (vacío o hasta 20 caracteres).
 
 `TipoIdentificador` es ahora ese vocabulario. Lo que se deduce del número sin
 elegir nada (`tipoDeIdentificador`) se llama `FormaIdentificador`.
