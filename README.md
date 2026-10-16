@@ -102,9 +102,10 @@ Un `<img>` solo sale si su dirección está en el dominio de la app que envía
 - **Icono de la app**: PNG estático del Hosting de cada app (`MARCAS[app].iconoUrl`).
 - **Logo del centro**: se pasa en `tenant.logoUrl` TAL CUAL está en Identity
   (`tenants/{id}.branding.logoUrl`, la dirección de Storage de
-  `tenant_logos/{tenantId}/logo_{ts}.png`). El marco la traduce con
+  `tenant_logos/{tenantId}/logo_{ts}.{png|jpg|webp}`; desde 0.13.0 la sube
+  Identity, ver `subirLogoDeTenantDesdeServidor`). El marco la traduce con
   `logoEnDominioDeLaApp(app, url)` a
-  `https://{dominio de la app}/logo/{tenantId}/logo_{ts}.png`. Un logo que no
+  `https://{dominio de la app}/logo/{tenantId}/logo_{ts}.{ext}`. Un logo que no
   esté en ese almacén (otro host, otra carpeta, SVG) no sale: queda el nombre
   del centro en texto. `saluHold` no tiene la ruta (sus correos no llevan logo).
 - **Quien sirve `/logo/**`**: cada app, con un rewrite de Hosting a una función
@@ -276,6 +277,11 @@ empresas):
 | `crearTenantDesdeServidor(app, datos, {tenantId?, actuaPor?})` | `crearTenantServidor` | Alta del tenant con origen en la app |
 | `actualizarTenantDesdeServidor(app, tenantId, datos, {actuaPor?})` | `actualizarTenantServidor` | Datos maestros, marca, límite de usuarios, apps de la cuenta en `origenIds`, marca de supresión; `activo`, `cif` y `planConcedido` solo con `actuaPor` = un superadmin |
 | `accesoAppDesdeServidor('salufact', {profesionalId, appId, activo, clinicaId?})` | `accesoAppServidor` | `appsActivas.<appId>` de SUS apps (`saluFact`, `factronia`, `asesoria`), con la regla de las cuentas de asesoría |
+| `subirLogoDeTenantDesdeServidor(app, tenantId, imagenBase64 \| null, {actuaPor})` (0.13.0) | `subirLogoTenantServidor` | Sube el logo (PNG, JPEG o WEBP por sus bytes, ≤ 2 MB) a un objeto NUEVO `tenant_logos/{tenantId}/logo_{ts}.{ext}` y escribe `branding.logoUrl` + `updatedAt`; con `null`, lo quita (el objeto se queda). Admite las cuentas de SaluFile (`salufile`), SaluFirst (`salufirst`) y SaluFact (`salufact`, `factronia`). `actuaPor` = quien administra la empresa (la app lo comprueba): Identity exige su ficha activa, de ese tenant y con esa app, o que sea superadmin |
+
+Desde 0.13.0 `tenant_logos/` está cerrado a la escritura directa en Storage:
+el portal sube por el callable `subirLogoTenantCanonico` (superadmin) y las
+apps, por `subirLogoDeTenantDesdeServidor`.
 
 `vincularEmpresaEnIdentity(db, arrayUnion, empresaId, clinicaId)` es la regla
 de vincular una empresa, la que aplican esos endpoints (como

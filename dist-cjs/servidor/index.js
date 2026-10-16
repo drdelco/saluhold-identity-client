@@ -8,7 +8,7 @@
 // permite a las functions de las cuatro apps —todas CommonJS— compartir estas
 // reglas en vez de tener cada una su copia.
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.accesoAppDesdeServidor = exports.actualizarTenantDesdeServidor = exports.crearTenantDesdeServidor = exports.actualizarEmpresaDesdeServidor = exports.vincularEmpresaDesdeServidor = exports.vincularEmpresaEnIdentity = exports.darDeAltaEmpresaDesdeServidor = exports.darDeAltaPacienteDesdeServidor = exports.liberarNifEnIdentity = exports.acunarNumeroHistoria = exports.clinicasDelGrupo = exports.vincularPacienteEnIdentity = void 0;
+exports.subirLogoDeTenantDesdeServidor = exports.accesoAppDesdeServidor = exports.actualizarTenantDesdeServidor = exports.crearTenantDesdeServidor = exports.actualizarEmpresaDesdeServidor = exports.vincularEmpresaDesdeServidor = exports.vincularEmpresaEnIdentity = exports.darDeAltaEmpresaDesdeServidor = exports.darDeAltaPacienteDesdeServidor = exports.liberarNifEnIdentity = exports.acunarNumeroHistoria = exports.clinicasDelGrupo = exports.vincularPacienteEnIdentity = void 0;
 var vinculacion_1 = require("./vinculacion");
 Object.defineProperty(exports, "vincularPacienteEnIdentity", { enumerable: true, get: function () { return vinculacion_1.vincularPacienteEnIdentity; } });
 Object.defineProperty(exports, "clinicasDelGrupo", { enumerable: true, get: function () { return vinculacion_1.clinicasDelGrupo; } });
@@ -27,4 +27,5 @@ Object.defineProperty(exports, "actualizarEmpresaDesdeServidor", { enumerable: t
 Object.defineProperty(exports, "crearTenantDesdeServidor", { enumerable: true, get: function () { return canonicosServidor_1.crearTenantDesdeServidor; } });
 Object.defineProperty(exports, "actualizarTenantDesdeServidor", { enumerable: true, get: function () { return canonicosServidor_1.actualizarTenantDesdeServidor; } });
 Object.defineProperty(exports, "accesoAppDesdeServidor", { enumerable: true, get: function () { return canonicosServidor_1.accesoAppDesdeServidor; } });
+Object.defineProperty(exports, "subirLogoDeTenantDesdeServidor", { enumerable: true, get: function () { return canonicosServidor_1.subirLogoDeTenantDesdeServidor; } });
 //# sourceMappingURL=index.js.map

@@ -21,7 +21,7 @@
 // qué puede hacer cada cuenta. Fuera de Google Cloud la llamada falla, a
 // propósito.
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.accesoAppDesdeServidor = exports.actualizarTenantDesdeServidor = exports.crearTenantDesdeServidor = exports.actualizarEmpresaDesdeServidor = exports.vincularEmpresaDesdeServidor = void 0;
+exports.accesoAppDesdeServidor = exports.subirLogoDeTenantDesdeServidor = exports.actualizarTenantDesdeServidor = exports.crearTenantDesdeServidor = exports.actualizarEmpresaDesdeServidor = exports.vincularEmpresaDesdeServidor = void 0;
 const altaServidor_1 = require("./altaServidor");
 const BASE = 'https://europe-west1-identity-44874.cloudfunctions.net';
 async function llamar(endpoint, cuerpo, que) {
@@ -62,6 +62,24 @@ function actualizarTenantDesdeServidor(app, tenantId, datos, opciones = {}) {
     }, 'actualizar el tenant');
 }
 exports.actualizarTenantDesdeServidor = actualizarTenantDesdeServidor;
+/**
+ * Sube (o quita, con `null`) el logo del tenant. Hasta 0.13.0 cada app escribía
+ * el objeto en el Storage de Identity con su cuenta de servicio, a su manera
+ * (con o sin token, siempre `.png` aunque no lo fuera). Identity comprueba ahora
+ * el tipo por los bytes (PNG, JPEG o WEBP) y el tamaño (≤ 2 MB), guarda SIEMPRE
+ * un objeto nuevo (los correos ya enviados apuntan al anterior), y escribe
+ * `branding.logoUrl` + `updatedAt`.
+ *
+ * `actuaPor` es el id de Identity de quien lo cambia: la app comprueba antes
+ * que administra esa empresa (el rol vive en la app); Identity, que su ficha
+ * esté activa, sea de ese tenant y tenga esa app (o que sea superadmin).
+ */
+function subirLogoDeTenantDesdeServidor(app, tenantId, imagenBase64, opciones) {
+    return llamar('subirLogoTenantServidor', {
+        app, tenantId, imagenBase64, actuaPor: opciones.actuaPor,
+    }, 'subir el logo');
+}
+exports.subirLogoDeTenantDesdeServidor = subirLogoDeTenantDesdeServidor;
 /**
  * Concede o retira `appsActivas.<appId>`. Respeta la regla de las cuentas de
  * asesoría (no conviven con las apps de producto en la misma cuenta).

@@ -95,6 +95,28 @@ export declare function crearTenantDesdeServidor(app: AppServidorSaluFact, datos
 export declare function actualizarTenantDesdeServidor(app: AppServidorSaluFact, tenantId: string, datos: DatosTenantServidor, opciones?: {
     actuaPor?: string | null;
 }): Promise<ResultadoTenantServidor>;
+/** Apps que suben el logo del centro desde su servidor (cada una, con su cuenta). */
+export type AppServidorLogo = 'salufile' | 'salufirst' | 'salufact' | 'factronia';
+export interface ResultadoLogoTenant {
+    tenantId: string;
+    /** Dirección de Storage del objeto NUEVO (`tenant_logos/{tenantId}/logo_{ts}.{png|jpg|webp}`), o null si se quitó. */
+    logoUrl: string | null;
+}
+/**
+ * Sube (o quita, con `null`) el logo del tenant. Hasta 0.13.0 cada app escribía
+ * el objeto en el Storage de Identity con su cuenta de servicio, a su manera
+ * (con o sin token, siempre `.png` aunque no lo fuera). Identity comprueba ahora
+ * el tipo por los bytes (PNG, JPEG o WEBP) y el tamaño (≤ 2 MB), guarda SIEMPRE
+ * un objeto nuevo (los correos ya enviados apuntan al anterior), y escribe
+ * `branding.logoUrl` + `updatedAt`.
+ *
+ * `actuaPor` es el id de Identity de quien lo cambia: la app comprueba antes
+ * que administra esa empresa (el rol vive en la app); Identity, que su ficha
+ * esté activa, sea de ese tenant y tenga esa app (o que sea superadmin).
+ */
+export declare function subirLogoDeTenantDesdeServidor(app: AppServidorLogo, tenantId: string, imagenBase64: string | null, opciones: {
+    actuaPor: string;
+}): Promise<ResultadoLogoTenant>;
 export interface PeticionAccesoApp {
     profesionalId: string;
     /** Solo las apps de la cuenta que llama (SaluFact: `saluFact`, `factronia`, `asesoria`). */

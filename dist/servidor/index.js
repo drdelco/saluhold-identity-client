@@ -11,5 +11,5 @@ export { liberarNifEnIdentity, } from './liberarNif';
 export { darDeAltaPacienteDesdeServidor, } from './altaServidor';
 export { darDeAltaEmpresaDesdeServidor, } from './altaEmpresaServidor';
 export { vincularEmpresaEnIdentity, } from './vinculacionEmpresa';
-export { vincularEmpresaDesdeServidor, actualizarEmpresaDesdeServidor, crearTenantDesdeServidor, actualizarTenantDesdeServidor, accesoAppDesdeServidor, } from './canonicosServidor';
+export { vincularEmpresaDesdeServidor, actualizarEmpresaDesdeServidor, crearTenantDesdeServidor, actualizarTenantDesdeServidor, accesoAppDesdeServidor, subirLogoDeTenantDesdeServidor, } from './canonicosServidor';
 //# sourceMappingURL=index.js.map
