@@ -110,6 +110,17 @@ const CASOS = [
     cuerpo: { app: 'factronia', tenantId: 't1', actuaPor: null, datos: { telefono: '600000000' } },
   },
   {
+    // 0.13.0: el logo del tenant se sube por Identity (objeto nuevo, tipo por los bytes).
+    nombre: 'subirLogoDeTenantDesdeServidor', endpoint: 'subirLogoTenantServidor',
+    llamar: () => S().subirLogoDeTenantDesdeServidor('salufile', 't1', 'iVBORw0KGgo=', { actuaPor: 'pAdmin' }),
+    cuerpo: { app: 'salufile', tenantId: 't1', imagenBase64: 'iVBORw0KGgo=', actuaPor: 'pAdmin' },
+  },
+  {
+    nombre: 'subirLogoDeTenantDesdeServidor (quitar)', endpoint: 'subirLogoTenantServidor', funcion: 'subirLogoDeTenantDesdeServidor',
+    llamar: () => S().subirLogoDeTenantDesdeServidor('salufirst', 't1', null, { actuaPor: 'pAdmin' }),
+    cuerpo: { app: 'salufirst', tenantId: 't1', imagenBase64: null, actuaPor: 'pAdmin' },
+  },
+  {
     nombre: 'accesoAppDesdeServidor', endpoint: 'accesoAppServidor',
     llamar: () => S().accesoAppDesdeServidor('salufact', { profesionalId: 'p1', appId: 'asesoria', activo: true, clinicaId: 'c1' }),
     cuerpo: { app: 'salufact', profesionalId: 'p1', appId: 'asesoria', activo: true, clinicaId: 'c1' },
@@ -118,7 +129,7 @@ const CASOS = [
 
 for (const c of CASOS) {
   test(`${c.nombre}: ID token del servidor de metadatos con audiencia = ${c.endpoint}, Bearer y POST con el cuerpo`, async () => {
-    assert.equal(typeof S()[c.nombre], 'function', `falta ${c.nombre} en /servidor`);
+    assert.equal(typeof S()[c.funcion || c.nombre], 'function', `falta ${c.funcion || c.nombre} en /servidor`);
     const f = conFetch(metadatosY({ ok: true }));
     try {
       const r = await c.llamar();
