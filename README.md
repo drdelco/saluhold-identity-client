@@ -322,6 +322,11 @@ Reglas compartidas nuevas (como `vincularPacienteEnIdentity`):
 `desvincularPacienteEnIdentity(db, {arrayRemove, borrar}, pacienteId, clinicaId)`
 y `asegurarNumeroHistoriaEnIdentity(db, pacienteId, clinicaId, {prefijo})`.
 
+**0.14.1** (16-10-2026): la cuenta de Identity Auth de un profesional se
+enlaza en `profesionales.authUid` (antes `idExterno`, nombre heredado de
+FileMaker que en pacientes y empresas era el nº de registro). Ni el SDK ni
+nadie en la suite nombra ya `idExterno` (vigía en `test/sinIdExterno.test.cjs`).
+
 ## Cuentas bancarias (0.12.0)
 
 En el núcleo (navegador y servidor), la ÚNICA regla de

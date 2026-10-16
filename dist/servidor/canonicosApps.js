@@ -74,7 +74,7 @@ export function eliminarProfesionalDesdeServidor(app, profesionalId, opciones) {
  * La cuenta de Identity Auth de una persona a la que la clínica invita: la
  * misma si ya existe (puede usar otra app de la suite), o una nueva sin
  * contraseña usable y con el correo sin confirmar. Si su ficha no tenía la
- * cuenta enlazada (`idExterno`), se enlaza y queda con la invitación pendiente.
+ * cuenta enlazada (`authUid`), se enlaza y queda con la invitación pendiente.
  */
 export function cuentaDeInvitacionDesdeServidor(app, clinicaId, persona, opciones) {
     return llamar('cuentaInvitacionServidor', {
