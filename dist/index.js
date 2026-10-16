@@ -510,6 +510,12 @@ export { PAISES_ISO, codigoPaisDe, nombrePaisDe, esCodigoPais } from './pais';
 // Sexo (H / M / O) — codec único de la suite
 // ─────────────────────────────────────────────────────────────────────────────
 export { OPCIONES_SEXO, sexoADisplay, displayASexo, comoSexoIdentity, esHombre, esMujer, sexoDesdeExterno, } from './sexo';
+// ─────────────────────────────────────────────────────────────────────────────
+// Cuentas bancarias de las fichas (IBAN, lista con histórico, antifraude)
+// ─────────────────────────────────────────────────────────────────────────────
+// La regla que aplican los canónicos de Identity. Los frontales la usan para
+// avisar antes de mandar (IBAN mal tecleado, cuenta que no coincide).
+export { normalizarIban, formatearIban, esIbanValido, crearCuenta, normalizarCuentas, anadirCuenta, evaluarIban, decidirRegistroDeCuenta, } from './cuentasBancarias';
 // Compresor de imagen para el lector de documentos. Vive con el escáner pero
 // no usa React ni Mantine, así que se ofrece también desde el núcleo: lo
 // necesita el portal de Identity, que es Tailwind.

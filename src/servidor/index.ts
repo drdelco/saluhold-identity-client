@@ -36,3 +36,24 @@ export {
   type DatosAltaEmpresaServidor,
   type ResultadoAltaEmpresaServidor,
 } from './altaEmpresaServidor';
+
+export {
+  vincularEmpresaEnIdentity,
+  type ResultadoVinculacionEmpresa,
+} from './vinculacionEmpresa';
+
+export {
+  vincularEmpresaDesdeServidor,
+  actualizarEmpresaDesdeServidor,
+  crearTenantDesdeServidor,
+  actualizarTenantDesdeServidor,
+  accesoAppDesdeServidor,
+  type AppServidorSaluFact,
+  type ResultadoVincularEmpresaServidor,
+  type DatosEmpresaServidor,
+  type ResultadoActualizarEmpresaServidor,
+  type DatosTenantServidor,
+  type ResultadoTenantServidor,
+  type PeticionAccesoApp,
+  type ResultadoAccesoApp,
+} from './canonicosServidor';

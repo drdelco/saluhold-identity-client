@@ -1,0 +1,40 @@
+"use strict";
+// vinculacionEmpresa.ts — qué significa vincular una EMPRESA a una clínica (0.12.0).
+//
+// Subruta `/servidor`: corre en Cloud Functions con el Admin SDK. La usan los
+// endpoints de Identity (`vincularEmpresaCanonica` con sesión y
+// `vincularEmpresaServidor` para los backends por IAM). Antes SaluFact la
+// escribía a mano en tres sitios (vincular un cliente y, en las comisiones,
+// vincular al cobrador y vincular el que el alta devolvía como existente).
+//
+// Como la de pacientes (`vincularPacienteEnIdentity`), menos el número de
+// historia, que una empresa no tiene:
+//
+//   1. `clinicaIds` gana la clínica Y las que heredan de ella (un grupo
+//      comparte sus clientes), con `arrayUnion`: dos vinculaciones a la vez no
+//      se pisan.
+//   2. `updatedAt` sube: sin él la empresa se cae del sync delta de los
+//      buscadores.
+//   3. Idempotente: si ya está en la clínica, no se escribe nada.
+//
+// Lo que NO entra: la traza de quién y por qué (cada app guarda su registro de
+// accesos, `audit_accesos` en SaluFact) ni las marcas de actividad de cliente.
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.vincularEmpresaEnIdentity = void 0;
+const vinculacion_1 = require("./vinculacion");
+async function vincularEmpresaEnIdentity(db, arrayUnion, empresaId, clinicaId, opciones = {}) {
+    const ref = db.collection(opciones.coleccionEmpresas || 'empresas').doc(empresaId);
+    const snap = await ref.get();
+    if (!snap.exists) {
+        throw new Error('No es posible vincular: la empresa no existe.');
+    }
+    const clinicaIds = Array.isArray(snap.data()?.clinicaIds) ? snap.data().clinicaIds : [];
+    if (clinicaIds.includes(clinicaId)) {
+        return { yaVinculada: true, clinicas: [clinicaId] };
+    }
+    const grupo = await (0, vinculacion_1.clinicasDelGrupo)(db, clinicaId, opciones.coleccionTenants);
+    await ref.update({ clinicaIds: arrayUnion(...grupo), updatedAt: new Date() });
+    return { yaVinculada: false, clinicas: grupo };
+}
+exports.vincularEmpresaEnIdentity = vincularEmpresaEnIdentity;
+//# sourceMappingURL=vinculacionEmpresa.js.map

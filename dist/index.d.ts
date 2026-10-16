@@ -190,6 +190,8 @@ export { PAISES_ISO, codigoPaisDe, nombrePaisDe, esCodigoPais } from './pais';
 export type { PaisISO } from './pais';
 export { OPCIONES_SEXO, sexoADisplay, displayASexo, comoSexoIdentity, esHombre, esMujer, sexoDesdeExterno, } from './sexo';
 export type { SexoIdentity, SexoDisplay } from './sexo';
+export { normalizarIban, formatearIban, esIbanValido, crearCuenta, normalizarCuentas, anadirCuenta, evaluarIban, decidirRegistroDeCuenta, } from './cuentasBancarias';
+export type { CuentaBancaria, EntradaCuenta, ResultadoAltaCuenta, ResultadoRegistroCuenta, EstadoIban, } from './cuentasBancarias';
 export { comprimirParaIA, type ImagenParaIA } from './ui/imagen';
 export { FORM_ALTA_VACIO, PERFILES_ALTA, pide, aplicarLecturaAlAlta, validarAlta, construirDatosAlta, avisoIdiomaNacionalidad, } from './ui/altaPaciente';
 export type { AppAlta, CampoAlta, FormularioAlta, PerfilAlta, OpcionesAlta, } from './ui/altaPaciente';

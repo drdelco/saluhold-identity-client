@@ -24,9 +24,9 @@ Con un solo sitio donde vive cada regla no hay convenio que traducir mal.
 
 | Entrada | Contenido | Dónde corre |
 |---|---|---|
-| `@saluhold/identity-client` | Codec del sexo, validación de DNI/NIE, tipo de documento, país ↔ ISO, cliente del servidor local | Navegador y servidor |
+| `@saluhold/identity-client` | Codec del sexo, validación de DNI/NIE, tipo de documento, país ↔ ISO, cuentas bancarias (IBAN y antifraude), cliente del servidor local | Navegador y servidor |
 | `@saluhold/identity-client/ui` | Componentes React + Mantine: escáner de documentos, formulario de alta | Solo navegador |
-| `@saluhold/identity-client/servidor` | Reglas que tocan Firestore con el Admin SDK | Solo Cloud Functions |
+| `@saluhold/identity-client/servidor` | Reglas que tocan Firestore con el Admin SDK y clientes de los endpoints de servidor de Identity | Solo Cloud Functions |
 | `@saluhold/identity-client/correo` | `renderCorreo` y los tokens de marca de los correos de la suite | Navegador y servidor |
 
 El núcleo no importa nada: ni React, ni Firebase. Quien solo necesite el codec
@@ -259,6 +259,46 @@ clínica. Un rechazo de Identity (documento mal, país que no reconoce…) lanza
 `Error` con su motivo. Cada cuenta solo puede dar altas con los orígenes de su
 app (`app`): hoy la de las functions de SaluFact, `salufact` y
 `salufirst-comisiones`.
+
+### Escrituras desde un servidor (0.12.0)
+
+«Todo canónico» (16-10-2026): lo que un backend escribe en Identity va por un
+endpoint de Identity, no a mano con su cuenta de servicio. Misma puerta (ID
+token del servidor de metadatos; Identity comprueba qué puede cada cuenta) y,
+si Identity rechaza, `Error` con su motivo. Hoy solo admiten la cuenta de las
+functions de SaluFact (`salufact`, `factronia`; y `salufirst-comisiones` en
+empresas):
+
+| Función | Endpoint | Qué hace |
+|---|---|---|
+| `vincularEmpresaDesdeServidor(app, clinicaId, empresaId)` | `vincularEmpresaServidor` | La clínica y sus heredadas en `clinicaIds`, `updatedAt`; idempotente |
+| `actualizarEmpresaDesdeServidor(app, clinicaId, empresaId, datos)` | `actualizarEmpresaServidor` | El parche de `actualizarEmpresaCanonica` (cuentas bancarias validadas) sobre una empresa de esa clínica |
+| `crearTenantDesdeServidor(app, datos, {tenantId?, actuaPor?})` | `crearTenantServidor` | Alta del tenant con origen en la app |
+| `actualizarTenantDesdeServidor(app, tenantId, datos, {actuaPor?})` | `actualizarTenantServidor` | Datos maestros, marca, límite de usuarios, apps de la cuenta en `origenIds`, marca de supresión; `activo`, `cif` y `planConcedido` solo con `actuaPor` = un superadmin |
+| `accesoAppDesdeServidor('salufact', {profesionalId, appId, activo, clinicaId?})` | `accesoAppServidor` | `appsActivas.<appId>` de SUS apps (`saluFact`, `factronia`, `asesoria`), con la regla de las cuentas de asesoría |
+
+`vincularEmpresaEnIdentity(db, arrayUnion, empresaId, clinicaId)` es la regla
+de vincular una empresa, la que aplican esos endpoints (como
+`vincularPacienteEnIdentity` para pacientes).
+
+## Cuentas bancarias (0.12.0)
+
+En el núcleo (navegador y servidor), la ÚNICA regla de
+`empresas.cuentasBancarias[]` y `pacientes.cuentasBancarias[]`; la aplican los
+canónicos de Identity:
+
+- `normalizarIban`, `formatearIban`, `esIbanValido` (longitud del país y
+  dígito de control, mod-97).
+- `normalizarCuentas(lista, guardadas?)`: la lista de un formulario sin filas
+  vacías, sin duplicados, con una predeterminada y los IBAN inválidos aparte
+  (`rechazados`); con `guardadas`, una cuenta que ya estaba conserva su id, su
+  origen, su factura, su alta y su verificación.
+- `anadirCuenta`, `evaluarIban` (`sin_iban` / `primera` / `conocido` /
+  `discrepante`).
+- `decidirRegistroDeCuenta(guardadas, {iban, facturaOrigen?, confirmada?})`: la
+  política antifraude de una cuenta que llega de fuera (una factura): a un
+  proveedor que YA tiene cuentas no se le añade otra sin que una persona lo
+  confirme (`requiere_confirmacion`, `escribir: false`). No relajarla.
 
 ## Traducir la interfaz
 

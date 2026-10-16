@@ -693,6 +693,29 @@ export {
 } from './sexo';
 export type { SexoIdentity, SexoDisplay } from './sexo';
 
+// ─────────────────────────────────────────────────────────────────────────────
+// Cuentas bancarias de las fichas (IBAN, lista con histórico, antifraude)
+// ─────────────────────────────────────────────────────────────────────────────
+// La regla que aplican los canónicos de Identity. Los frontales la usan para
+// avisar antes de mandar (IBAN mal tecleado, cuenta que no coincide).
+export {
+  normalizarIban,
+  formatearIban,
+  esIbanValido,
+  crearCuenta,
+  normalizarCuentas,
+  anadirCuenta,
+  evaluarIban,
+  decidirRegistroDeCuenta,
+} from './cuentasBancarias';
+export type {
+  CuentaBancaria,
+  EntradaCuenta,
+  ResultadoAltaCuenta,
+  ResultadoRegistroCuenta,
+  EstadoIban,
+} from './cuentasBancarias';
+
 // Compresor de imagen para el lector de documentos. Vive con el escáner pero
 // no usa React ni Mantine, así que se ofrece también desde el núcleo: lo
 // necesita el portal de Identity, que es Tailwind.

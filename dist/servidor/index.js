@@ -10,4 +10,6 @@ export { vincularPacienteEnIdentity, clinicasDelGrupo, acunarNumeroHistoria, } f
 export { liberarNifEnIdentity, } from './liberarNif';
 export { darDeAltaPacienteDesdeServidor, } from './altaServidor';
 export { darDeAltaEmpresaDesdeServidor, } from './altaEmpresaServidor';
+export { vincularEmpresaEnIdentity, } from './vinculacionEmpresa';
+export { vincularEmpresaDesdeServidor, actualizarEmpresaDesdeServidor, crearTenantDesdeServidor, actualizarTenantDesdeServidor, accesoAppDesdeServidor, } from './canonicosServidor';
 //# sourceMappingURL=index.js.map

@@ -22,7 +22,7 @@
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.sexoADisplay = exports.OPCIONES_SEXO = exports.esCodigoPais = exports.nombrePaisDe = exports.codigoPaisDe = exports.PAISES_ISO = exports.resolverDocumento = exports.tipoPorForma = exports.validarDocumento = exports.normalizarDocumento = exports.paisDeNifIva = exports.opcionesTipoIdentificador = exports.esNifEspanol = exports.idTypeAeatDe = exports.etiquetaTipoIdentificador = exports.esTipoIdentificador = exports.LARGO_MAXIMO_DOCUMENTO = exports.PREFIJOS_NIF_IVA = exports.OPCIONES_TIPO_IDENTIFICADOR = exports.TIPOS_IDENTIFICADOR = exports.identificadorAceptable = exports.validarIdentificador = exports.tipoDeIdentificador = exports.canonizarIdentificador = exports.normalizarIdentificador = exports.localGetClinicConfig = exports.localBuscarProfesionalPorUID = exports.localObtenerProfesional = exports.localBuscarProfesionales = exports.localListarProfesionales = exports.localListarPacientesRecientes = exports.localObtenerPaciente = exports.localBuscarPacientes = exports.localObtenerCliente = exports.localClientesRecientes = exports.localBuscarClientes = exports.mapEmpresaToCliente = exports.mapPacienteToCliente = exports.localGet = exports.localPost = exports.getAcceleratorToken = exports.setAcceleratorToken = exports.ensureLocalServerChecked = exports.resetLocalServerCheck = exports.getLocalServerStats = exports.isLocalServerAvailable = exports.getLocalServerUrl = exports.hayAceleradorConfigurado = exports.setLocalServerHostExternal = exports.setLocalServerHost = void 0;
-exports.fechaISO = exports.fichaEditableDesdeIdentity = exports.construirParchePaciente = exports.TEXTOS_UI_ES = exports.textosUI = exports.configurarTextosUI = exports.avisoIdiomaNacionalidad = exports.construirDatosAlta = exports.validarAlta = exports.aplicarLecturaAlAlta = exports.pide = exports.PERFILES_ALTA = exports.FORM_ALTA_VACIO = exports.comprimirParaIA = exports.sexoDesdeExterno = exports.esMujer = exports.esHombre = exports.comoSexoIdentity = exports.displayASexo = void 0;
+exports.fechaISO = exports.fichaEditableDesdeIdentity = exports.construirParchePaciente = exports.TEXTOS_UI_ES = exports.textosUI = exports.configurarTextosUI = exports.avisoIdiomaNacionalidad = exports.construirDatosAlta = exports.validarAlta = exports.aplicarLecturaAlAlta = exports.pide = exports.PERFILES_ALTA = exports.FORM_ALTA_VACIO = exports.comprimirParaIA = exports.decidirRegistroDeCuenta = exports.evaluarIban = exports.anadirCuenta = exports.normalizarCuentas = exports.crearCuenta = exports.esIbanValido = exports.formatearIban = exports.normalizarIban = exports.sexoDesdeExterno = exports.esMujer = exports.esHombre = exports.comoSexoIdentity = exports.displayASexo = void 0;
 // ═══════════════════════════════════════════════════════════════════════════
 // ESTADO Y CONFIGURACIÓN DE CONEXIÓN
 // ═══════════════════════════════════════════════════════════════════════════
@@ -569,6 +569,20 @@ Object.defineProperty(exports, "comoSexoIdentity", { enumerable: true, get: func
 Object.defineProperty(exports, "esHombre", { enumerable: true, get: function () { return sexo_1.esHombre; } });
 Object.defineProperty(exports, "esMujer", { enumerable: true, get: function () { return sexo_1.esMujer; } });
 Object.defineProperty(exports, "sexoDesdeExterno", { enumerable: true, get: function () { return sexo_1.sexoDesdeExterno; } });
+// ─────────────────────────────────────────────────────────────────────────────
+// Cuentas bancarias de las fichas (IBAN, lista con histórico, antifraude)
+// ─────────────────────────────────────────────────────────────────────────────
+// La regla que aplican los canónicos de Identity. Los frontales la usan para
+// avisar antes de mandar (IBAN mal tecleado, cuenta que no coincide).
+var cuentasBancarias_1 = require("./cuentasBancarias");
+Object.defineProperty(exports, "normalizarIban", { enumerable: true, get: function () { return cuentasBancarias_1.normalizarIban; } });
+Object.defineProperty(exports, "formatearIban", { enumerable: true, get: function () { return cuentasBancarias_1.formatearIban; } });
+Object.defineProperty(exports, "esIbanValido", { enumerable: true, get: function () { return cuentasBancarias_1.esIbanValido; } });
+Object.defineProperty(exports, "crearCuenta", { enumerable: true, get: function () { return cuentasBancarias_1.crearCuenta; } });
+Object.defineProperty(exports, "normalizarCuentas", { enumerable: true, get: function () { return cuentasBancarias_1.normalizarCuentas; } });
+Object.defineProperty(exports, "anadirCuenta", { enumerable: true, get: function () { return cuentasBancarias_1.anadirCuenta; } });
+Object.defineProperty(exports, "evaluarIban", { enumerable: true, get: function () { return cuentasBancarias_1.evaluarIban; } });
+Object.defineProperty(exports, "decidirRegistroDeCuenta", { enumerable: true, get: function () { return cuentasBancarias_1.decidirRegistroDeCuenta; } });
 // Compresor de imagen para el lector de documentos. Vive con el escáner pero
 // no usa React ni Mantine, así que se ofrece también desde el núcleo: lo
 // necesita el portal de Identity, que es Tailwind.
