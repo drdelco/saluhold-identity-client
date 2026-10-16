@@ -60,3 +60,51 @@ export {
   type PeticionAccesoApp,
   type ResultadoAccesoApp,
 } from './canonicosServidor';
+
+export {
+  ErrorDeIdentity,
+  codigoDeEstadoIdentity,
+  type AppServidor,
+  type AppServidorPersonal,
+} from './canonicosServidor';
+
+// 0.14.0 — SaluFile y SaluFirst: personal, cuentas, fotos, acelerador,
+// complementos y edición de paciente desde el servidor.
+export {
+  publicarAceleradorDesdeServidor,
+  sincronizarComplementosDesdeServidor,
+  altaProfesionalDesdeServidor,
+  vincularProfesionalDesdeServidor,
+  desvincularProfesionalDesdeServidor,
+  actualizarProfesionalDesdeServidor,
+  eliminarProfesionalDesdeServidor,
+  cuentaDeInvitacionDesdeServidor,
+  enlaceDeContrasenaDesdeServidor,
+  activarCuentaDesdeServidor,
+  suspenderCuentaDesdeServidor,
+  subirFotoDesdeServidor,
+  actualizarPacienteDesdeServidor,
+  type DatosAceleradorServidor,
+  type ResultadoAceleradorServidor,
+  type AppComplemento,
+  type CambioDeComplemento,
+  type DatosProfesionalServidor,
+} from './canonicosApps';
+
+export {
+  cambiosDeComplementos,
+  APPS_DE_COMPLEMENTO,
+  type AppDeComplemento,
+  type EntradaComplementos,
+  type ProfesionalParaComplementos,
+  type CambioComplemento,
+  type ParcheComplementos,
+} from './complementos';
+
+export {
+  desvincularPacienteEnIdentity,
+  asegurarNumeroHistoriaEnIdentity,
+  type FirestoreConTransaccion,
+  type CamposDesvinculacion,
+  type ResultadoNumeroHistoria,
+} from './pacienteServidor';

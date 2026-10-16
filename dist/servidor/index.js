@@ -12,4 +12,10 @@ export { darDeAltaPacienteDesdeServidor, } from './altaServidor';
 export { darDeAltaEmpresaDesdeServidor, } from './altaEmpresaServidor';
 export { vincularEmpresaEnIdentity, } from './vinculacionEmpresa';
 export { vincularEmpresaDesdeServidor, actualizarEmpresaDesdeServidor, crearTenantDesdeServidor, actualizarTenantDesdeServidor, accesoAppDesdeServidor, subirLogoDeTenantDesdeServidor, } from './canonicosServidor';
+export { ErrorDeIdentity, codigoDeEstadoIdentity, } from './canonicosServidor';
+// 0.14.0 — SaluFile y SaluFirst: personal, cuentas, fotos, acelerador,
+// complementos y edición de paciente desde el servidor.
+export { publicarAceleradorDesdeServidor, sincronizarComplementosDesdeServidor, altaProfesionalDesdeServidor, vincularProfesionalDesdeServidor, desvincularProfesionalDesdeServidor, actualizarProfesionalDesdeServidor, eliminarProfesionalDesdeServidor, cuentaDeInvitacionDesdeServidor, enlaceDeContrasenaDesdeServidor, activarCuentaDesdeServidor, suspenderCuentaDesdeServidor, subirFotoDesdeServidor, actualizarPacienteDesdeServidor, } from './canonicosApps';
+export { cambiosDeComplementos, APPS_DE_COMPLEMENTO, } from './complementos';
+export { desvincularPacienteEnIdentity, asegurarNumeroHistoriaEnIdentity, } from './pacienteServidor';
 //# sourceMappingURL=index.js.map

@@ -27,7 +27,51 @@ const BASE = 'https://europe-west1-identity-44874.cloudfunctions.net';
 /** Apps de SaluFact (mismo proyecto). Identity solo acepta las de la cuenta que llama. */
 export type AppServidorSaluFact = 'salufact' | 'factronia';
 
-async function llamar<T>(endpoint: string, cuerpo: Record<string, unknown>, que: string): Promise<T> {
+/**
+ * Cualquier app de la suite desde su servidor (0.14.0). Cada endpoint admite
+ * solo las de la cuenta que llama: SaluFile (`salufile`), SaluFirst
+ * (`salufirst`), SaluFact (`salufact`, `factronia`).
+ */
+export type AppServidor = 'salufile' | 'salufirst' | AppServidorSaluFact;
+
+/** Apps con personal propio (alta, vínculo y cuentas de invitación desde su servidor). */
+export type AppServidorPersonal = 'salufile' | 'salufirst';
+
+/** Código (el de un HttpsError) que corresponde a un estado HTTP de Identity. */
+export function codigoDeEstadoIdentity(status: number): string {
+  switch (status) {
+    case 400: return 'invalid-argument';
+    case 401: return 'unauthenticated';
+    case 403: return 'permission-denied';
+    case 404: return 'not-found';
+    case 409: return 'already-exists';
+    case 412: return 'failed-precondition';
+    case 429: return 'resource-exhausted';
+    case 503: return 'unavailable';
+    default: return 'internal';
+  }
+}
+
+/**
+ * Un rechazo de Identity (0.14.0). Es un `Error` con el mensaje de Identity
+ * (para el usuario), y además el estado, el código y los detalles: una app
+ * necesita saber, por ejemplo, que un alta es un 409 y de qué ficha.
+ */
+export class ErrorDeIdentity extends Error {
+  status: number;
+  codigo: string;
+  detalles: Record<string, unknown> | null;
+  constructor(mensaje: string, status: number, codigo: string | null, detalles: Record<string, unknown> | null) {
+    super(mensaje);
+    this.name = 'ErrorDeIdentity';
+    this.status = status;
+    this.codigo = codigo || codigoDeEstadoIdentity(status);
+    this.detalles = detalles;
+  }
+}
+
+/** POST a un endpoint de servidor de Identity con el ID token de la cuenta (lo usan también los de 0.14.0). */
+export async function llamar<T>(endpoint: string, cuerpo: Record<string, unknown>, que: string): Promise<T> {
   const url = `${BASE}/${endpoint}`;
   const token = await idTokenDelServidor(url);
   const r = await fetch(url, {
@@ -37,7 +81,14 @@ async function llamar<T>(endpoint: string, cuerpo: Record<string, unknown>, que:
   });
   const respuesta = await r.json().catch(() => ({})) as Record<string, unknown>;
   if (!r.ok) {
-    throw new Error(String(respuesta.error || `Identity respondió ${r.status} al ${que}.`));
+    const detalles = respuesta.detalles && typeof respuesta.detalles === 'object'
+      ? respuesta.detalles as Record<string, unknown> : null;
+    throw new ErrorDeIdentity(
+      String(respuesta.error || `Identity respondió ${r.status} al ${que}.`),
+      r.status,
+      typeof respuesta.codigo === 'string' ? respuesta.codigo : null,
+      detalles,
+    );
   }
   return respuesta as unknown as T;
 }
@@ -124,7 +175,13 @@ export interface DatosTenantServidor {
   branding?: { primaryColor?: string | null; logoUrl?: string | null };
   limiteUsuarios?: number;
   /** Añade (`true`) o quita (`false`) una app de las de la cuenta que llama en `origenIds`. */
-  apps?: Partial<Record<AppServidorSaluFact, boolean>>;
+  apps?: Partial<Record<AppServidor | 'identity', boolean>>;
+  /**
+   * El plan de la app que llama en ESTE tenant (0.14.0): `appConfig.<app>`
+   * (`plan`, `pruebaPro`), y el `plan` del tenant si el tenant nació en esa
+   * app. Hoy, SaluFirst al pasar a PRO o volver a FREE.
+   */
+  planApp?: { plan?: string | null; pruebaPro?: boolean };
   /** Marca de supresión de los datos de las apps de quien llama (quita sus apps de `origenIds`). */
   supresion?: { por: { uid: string | null; email: string | null } };
   // Solo superadmin (`actuaPor`):
@@ -133,6 +190,8 @@ export interface DatosTenantServidor {
   planConcedido?: string | null;
   // Solo en el alta:
   adminPrincipal?: { email: string; nombre?: string | null; uid?: string | null };
+  /** Texto del plan del alta (FREE/PRO/CORPORATE). Solo un superadmin (`actuaPor`). */
+  plan?: string;
 }
 
 export interface ResultadoTenantServidor {
@@ -144,7 +203,7 @@ export interface ResultadoTenantServidor {
 
 /** Alta de un tenant con origen en la app. `tenantId` opcional (si la app ya tiene el suyo). */
 export function crearTenantDesdeServidor(
-  app: AppServidorSaluFact,
+  app: AppServidor,
   datos: DatosTenantServidor,
   opciones: { tenantId?: string | null; actuaPor?: string | null } = {},
 ): Promise<ResultadoTenantServidor> {
@@ -155,7 +214,7 @@ export function crearTenantDesdeServidor(
 
 /** Actualiza el tenant (parche: lo que no se manda no se toca). */
 export function actualizarTenantDesdeServidor(
-  app: AppServidorSaluFact,
+  app: AppServidor,
   tenantId: string,
   datos: DatosTenantServidor,
   opciones: { actuaPor?: string | null } = {},
@@ -203,8 +262,11 @@ export function subirLogoDeTenantDesdeServidor(
 
 export interface PeticionAccesoApp {
   profesionalId: string;
-  /** Solo las apps de la cuenta que llama (SaluFact: `saluFact`, `factronia`, `asesoria`). */
-  appId: 'saluFact' | 'factronia' | 'asesoria';
+  /**
+   * Solo las apps de la cuenta que llama (SaluFact: `saluFact`, `factronia`,
+   * `asesoria`; SaluFile: `saluFile`, al suprimir los datos de un centro).
+   */
+  appId: 'saluFact' | 'factronia' | 'asesoria' | 'saluFile';
   activo: boolean;
   /** Al conceder, añade esta clínica a las del profesional (el asesor la ve en su selector). */
   clinicaId?: string | null;
@@ -222,7 +284,7 @@ export interface ResultadoAccesoApp {
  * asesoría (no conviven con las apps de producto en la misma cuenta).
  */
 export function accesoAppDesdeServidor(
-  app: 'salufact',
+  app: 'salufact' | 'salufile',
   peticion: PeticionAccesoApp,
 ): Promise<ResultadoAccesoApp> {
   return llamar('accesoAppServidor', { app, ...peticion }, 'cambiar el acceso a la app');

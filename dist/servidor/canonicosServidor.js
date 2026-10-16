@@ -21,7 +21,36 @@
 // propósito.
 import { idTokenDelServidor } from './altaServidor';
 const BASE = 'https://europe-west1-identity-44874.cloudfunctions.net';
-async function llamar(endpoint, cuerpo, que) {
+/** Código (el de un HttpsError) que corresponde a un estado HTTP de Identity. */
+export function codigoDeEstadoIdentity(status) {
+    switch (status) {
+        case 400: return 'invalid-argument';
+        case 401: return 'unauthenticated';
+        case 403: return 'permission-denied';
+        case 404: return 'not-found';
+        case 409: return 'already-exists';
+        case 412: return 'failed-precondition';
+        case 429: return 'resource-exhausted';
+        case 503: return 'unavailable';
+        default: return 'internal';
+    }
+}
+/**
+ * Un rechazo de Identity (0.14.0). Es un `Error` con el mensaje de Identity
+ * (para el usuario), y además el estado, el código y los detalles: una app
+ * necesita saber, por ejemplo, que un alta es un 409 y de qué ficha.
+ */
+export class ErrorDeIdentity extends Error {
+    constructor(mensaje, status, codigo, detalles) {
+        super(mensaje);
+        this.name = 'ErrorDeIdentity';
+        this.status = status;
+        this.codigo = codigo || codigoDeEstadoIdentity(status);
+        this.detalles = detalles;
+    }
+}
+/** POST a un endpoint de servidor de Identity con el ID token de la cuenta (lo usan también los de 0.14.0). */
+export async function llamar(endpoint, cuerpo, que) {
     const url = `${BASE}/${endpoint}`;
     const token = await idTokenDelServidor(url);
     const r = await fetch(url, {
@@ -31,7 +60,9 @@ async function llamar(endpoint, cuerpo, que) {
     });
     const respuesta = await r.json().catch(() => ({}));
     if (!r.ok) {
-        throw new Error(String(respuesta.error || `Identity respondió ${r.status} al ${que}.`));
+        const detalles = respuesta.detalles && typeof respuesta.detalles === 'object'
+            ? respuesta.detalles : null;
+        throw new ErrorDeIdentity(String(respuesta.error || `Identity respondió ${r.status} al ${que}.`), r.status, typeof respuesta.codigo === 'string' ? respuesta.codigo : null, detalles);
     }
     return respuesta;
 }

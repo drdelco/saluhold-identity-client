@@ -1,0 +1,105 @@
+"use strict";
+// complementos.ts — la regla de los complementos de la suscripción en
+// `appsActivas` (0.14.0).
+//
+// SaluFile vende SaluFact y SaluFirst como complementos de su suscripción.
+// Decisión de Diego (2026-09-26): **el complemento solo CONCEDE el acceso y
+// nunca lo retira a quien ya lo tenía por su cuenta.**
+//
+//  - Complemento activo → `appsActivas.<app> = true` a las personas activas de
+//    la clínica con acceso a SaluFile que NO lo tuvieran, y la clínica se apunta
+//    en `appsPorComplemento.<app>` (una persona puede estar en dos centros con
+//    el mismo complemento). Quien ya tenía la app sin esa marca no se toca: la
+//    tiene por su cuenta.
+//  - Complemento cancelado → se quita la clínica de la marca y SOLO se retira la
+//    app si ya no queda ninguna clínica en la marca y ningún tenant de la
+//    persona tiene esa app en `origenIds` (el centro la usa por su cuenta).
+//  - Si la marca dice que se concedió y la app está en `false`, alguien la
+//    retiró a mano en Identity: se respeta y no se vuelve a conceder.
+//
+// Era `functions/utils/complementos-identity.js` de SaluFile, que escribía en
+// Identity con su cuenta. Ahora la regla es esta, PURA (no lee ni escribe): la
+// aplica el endpoint `complementosServidor` de Identity, que es quien escribe,
+// y la usa la simulación (`--dry-run`) de SaluFile para enseñar qué haría.
+//
+// Lo que devuelve no lleva nombres: acaba en un log.
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.cambiosDeComplementos = exports.APPS_DE_COMPLEMENTO = void 0;
+/** Apps que SaluFile vende como complemento (clave de `appsActivas`). */
+exports.APPS_DE_COMPLEMENTO = ['saluFact', 'saluFirst'];
+/** Clave de cada una en `origenIds` de un tenant (el centro la usa por su cuenta). */
+const ORIGEN = { saluFact: 'salufact', saluFirst: 'salufirst' };
+function comoApps(lista, que) {
+    const fuera = (lista || []).filter((a) => !exports.APPS_DE_COMPLEMENTO.includes(a));
+    if (fuera.length) {
+        throw new Error(`${que}: ${fuera.join(', ')} no es una app de complemento (${exports.APPS_DE_COMPLEMENTO.join(', ')}).`);
+    }
+    return [...new Set(lista || [])];
+}
+async function cambiosDeComplementos(e) {
+    const activos = new Set(comoApps(e.activos, 'Complementos activos'));
+    const revisar = e.revisar ? comoApps(e.revisar, 'Complementos a revisar') : [...exports.APPS_DE_COMPLEMENTO];
+    const cambios = [];
+    const parches = [];
+    for (const { id, datos: p } of e.profesionales) {
+        const apps = (p.appsActivas && typeof p.appsActivas === 'object' ? p.appsActivas : {});
+        const porComplemento = (p.appsPorComplemento && typeof p.appsPorComplemento === 'object'
+            ? p.appsPorComplemento : {});
+        const parche = { profesionalId: id, apps: {}, marcar: [], desmarcar: [] };
+        for (const app of revisar) {
+            const marca = Array.isArray(porComplemento[app]) ? porComplemento[app] : [];
+            const marcadoAqui = marca.includes(e.clinicaId);
+            const registrar = (accion, motivo) => cambios.push({ accion, app, profesionalId: id, motivo });
+            if (activos.has(app)) {
+                if (p.activo === false || apps.saluFile !== true)
+                    continue; // no ocupa SaluFile en el centro
+                if (apps[app] === true) {
+                    if (marca.length > 0 && !marcadoAqui) {
+                        parche.marcar.push(app);
+                        registrar('marcar', 'ya concedida por el complemento de otro centro');
+                    }
+                    continue; // la tenía (por su cuenta o ya concedida): no se toca
+                }
+                if (marcadoAqui) {
+                    registrar('respetar', 'retirada a mano en Identity después de concederla; no se vuelve a conceder');
+                    continue;
+                }
+                parche.apps[app] = true;
+                parche.marcar.push(app);
+                registrar('conceder', `complemento de ${app} activo`);
+            }
+            else if (marcadoAqui) {
+                parche.desmarcar.push(app);
+                const quedan = marca.filter((c) => c !== e.clinicaId);
+                if (quedan.length > 0) {
+                    registrar('desmarcar', `la sigue sosteniendo el complemento de ${quedan.join(', ')}`);
+                    continue;
+                }
+                let usoPropio = null;
+                const clinicas = Array.isArray(p.clinicaIds) ? p.clinicaIds : [];
+                for (const t of clinicas) {
+                    if ((await e.origenesDe(t)).includes(ORIGEN[app])) {
+                        usoPropio = t;
+                        break;
+                    }
+                }
+                if (usoPropio) {
+                    registrar('desmarcar', `el centro ${usoPropio} usa ${app} por su cuenta (origenIds): se conserva el acceso`);
+                    continue;
+                }
+                if (apps[app] === true) {
+                    parche.apps[app] = false;
+                    registrar('retirar', `complemento de ${app} cancelado`);
+                }
+                else {
+                    registrar('desmarcar', 'ya no tenía la app');
+                }
+            }
+        }
+        if (Object.keys(parche.apps).length || parche.marcar.length || parche.desmarcar.length)
+            parches.push(parche);
+    }
+    return { cambios, parches };
+}
+exports.cambiosDeComplementos = cambiosDeComplementos;
+//# sourceMappingURL=complementos.js.map

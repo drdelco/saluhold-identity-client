@@ -287,6 +287,41 @@ apps, por `subirLogoDeTenantDesdeServidor`.
 de vincular una empresa, la que aplican esos endpoints (como
 `vincularPacienteEnIdentity` para pacientes).
 
+### SaluFile y SaluFirst (0.14.0)
+
+«Todo canónico» también en las dos apps clínicas (16-10-2026). Desde 0.14.0
+un rechazo de Identity es un `ErrorDeIdentity` (sigue siendo `Error`, con el
+mensaje de Identity) con `status`, `codigo` (el de un HttpsError:
+`codigoDeEstadoIdentity`) y `detalles` (p. ej. de qué ficha es un 409). Los de
+0.12.0 admiten además `salufile` y `salufirst` (tenants: los de sus apps o
+donde trabaja alguien suyo con la app; `planApp` = el plan de la app en
+`appConfig.<app>`; `accesoAppDesdeServidor('salufile', …)` solo `saluFile`).
+
+`actuaPor` = id de Identity de quien lo hace: la app comprueba su ROL (vive en
+la app); Identity, que su ficha esté activa y trabaje en esa clínica con esa
+app, o que sea superadmin.
+
+| Función | Endpoint | Qué hace |
+|---|---|---|
+| `publicarAceleradorDesdeServidor('salufile', clinicaId, {token?, ips?, ipsExternas?, version?})` | `publicarAceleradorServidor` | Parche de `tenants/{id}.acelerador` |
+| `sincronizarComplementosDesdeServidor('salufile', clinicaId, {activos, revisar?})` | `complementosServidor` | `appsActivas` de los complementos (SaluFact, SaluFirst) con `cambiosDeComplementos` |
+| `altaProfesionalDesdeServidor(app, clinicaId, datos, {actuaPor, idLocal?})` | `altaProfesionalServidor` | Alta de la persona; documento o email repetidos → 409 con `{profesionalId, enLaClinica}` |
+| `vincularProfesionalDesdeServidor(app, clinicaId, profesionalId, {actuaPor, idLocal?})` | `vincularProfesionalServidor` | La clínica en `clinicaIds`; idempotente |
+| `desvincularProfesionalDesdeServidor(app, clinicaId, profesionalId, {actuaPor})` | `desvincularProfesionalServidor` | La quita; sin clínicas, ficha inactiva |
+| `actualizarProfesionalDesdeServidor(app, clinicaId, profesionalId, datos, {actuaPor})` | `actualizarProfesionalServidor` | Parche de la ficha; `activo` solo si no trabaja en otra clínica (o superadmin); `colegiadoVerificado`, superadmin |
+| `eliminarProfesionalDesdeServidor(app, profesionalId, {actuaPor})` | `eliminarProfesionalServidor` | Borrado completo (superadmin) |
+| `cuentaDeInvitacionDesdeServidor(app, clinicaId, {email, nombre?}, {actuaPor})` | `cuentaInvitacionServidor` | La cuenta de Identity Auth del invitado (la misma si ya existe) |
+| `enlaceDeContrasenaDesdeServidor(app, clinicaId, email)` | `enlaceContrasenaServidor` | `oobCode` para fijar la contraseña (persona de esa clínica) |
+| `activarCuentaDesdeServidor(app, clinicaId, uid, {password?})` | `activarCuentaServidor` | Correo confirmado y, si se da, contraseña (≥ 8) |
+| `suspenderCuentaDesdeServidor(app, uid, suspendida, {actuaPor})` | `suspenderCuentaServidor` | Suspende o reactiva la cuenta (superadmin) |
+| `subirFotoDesdeServidor(app, 'paciente' \| 'profesional', id, imagenBase64 \| null, {actuaPor, clinicaId?})` | `subirFotoServidor` | Foto de carnet: objeto nuevo con token, `fotoUrl` + `updatedAt` |
+| `actualizarPacienteDesdeServidor(app, clinicaId, pacienteId, datos, {borrar?})` | `actualizarPacienteServidor` | El parche de `actualizarPacienteCanonico` sin sesión (el chatbot) |
+
+Reglas compartidas nuevas (como `vincularPacienteEnIdentity`):
+`cambiosDeComplementos` (pura: la aplica Identity y la simula SaluFile),
+`desvincularPacienteEnIdentity(db, {arrayRemove, borrar}, pacienteId, clinicaId)`
+y `asegurarNumeroHistoriaEnIdentity(db, pacienteId, clinicaId, {prefijo})`.
+
 ## Cuentas bancarias (0.12.0)
 
 En el núcleo (navegador y servidor), la ÚNICA regla de
