@@ -24,6 +24,11 @@
       "types": "./dist/correo/index.d.ts",
       "import": "./dist/correo/index.js",
       "require": "./dist-cjs/correo/index.js"
+    },
+    "./sello": {
+      "types": "./dist/sello/selloTiempo.d.ts",
+      "import": "./dist/sello/selloTiempo.js",
+      "require": "./dist-cjs/sello/selloTiempo.js"
     }
   },
   "typesVersions": {
@@ -36,6 +41,9 @@
       ],
       "correo": [
         "dist/correo/index.d.ts"
+      ],
+      "sello": [
+        "dist/sello/selloTiempo.d.ts"
       ]
     }
   },

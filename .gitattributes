@@ -34,3 +34,8 @@
 *.bat   text eol=crlf
 *.cmd   text eol=crlf
 *.ps1   text eol=crlf
+
+# Vectores DER de sellos de tiempo (RFC 3161): bytes exactos.
+*.tsr   binary
+*.tsq   binary
+*.der   binary

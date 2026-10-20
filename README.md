@@ -28,6 +28,19 @@ Con un solo sitio donde vive cada regla no hay convenio que traducir mal.
 | `@saluhold/identity-client/ui` | Componentes React + Mantine: escáner de documentos, formulario de alta | Solo navegador |
 | `@saluhold/identity-client/servidor` | Reglas que tocan Firestore con el Admin SDK y clientes de los endpoints de servidor de Identity | Solo Cloud Functions |
 | `@saluhold/identity-client/correo` | `renderCorreo` y los tokens de marca de los correos de la suite | Navegador y servidor |
+| `@saluhold/identity-client/sello` | Módulo ÚNICO de sellos de tiempo RFC 3161: huellas, petición, verificación completa, cola en Firestore, lotes de Merkle y paquete de verificación | Solo servidor (Node ≥ 18) |
+
+## Sellos de tiempo
+
+`src/sello/selloTiempo.ts` es UN fichero autocontenido (solo `node:crypto` y
+`fetch`), porque eXCausis lleva una copia byte a byte vigilada por su SHA-256
+(lo imprime `npm test`). No puede importar nada del SDK ni usar nada que no
+compile con `target es2017` sin `strict`. La configuración por defecto es
+FreeTSA sola; la TSA cualificada entra por configuración (`principal` /
+`respaldo`, autenticación `basica` con la credencial por parámetro). Pruebas:
+vectores reales de FreeTSA en `test/vectores/freetsa`, contrastados con
+`openssl ts -verify` cuando OpenSSL está en el PATH, y una TSA de mentira con
+la PKI de usar y tirar de `test/vectores/pki-prueba`.
 
 El núcleo no importa nada: ni React, ni Firebase. Quien solo necesite el codec
 del sexo no paga por el resto.

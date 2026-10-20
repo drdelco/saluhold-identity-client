@@ -1,0 +1,14 @@
+PKI DE USAR Y TIRAR para las pruebas de `src/sello/selloTiempo.ts`.
+
+No vale para nada fuera de las pruebas: la usa la TSA de mentira de
+`test/selloTiempo.test.cjs` para firmar sellos en memoria.
+
+  ca.pem                  raíz de pruebas (su clave privada se borró al generarla)
+  otra-ca.pem             otra raíz, para el caso «raíz equivocada»
+  tsa.pem / tsa.key       certificado y clave de la TSA de pruebas (RSA 2048,
+                          uso extendido crítico timeStamping)
+  tsa-eku-no-critica.pem  la misma clave con el uso extendido NO crítico
+
+Generada el 20-10-2026 con OpenSSL 3.5.5 (`openssl req -x509` para las raíces,
+`openssl x509 -req` con `extendedKeyUsage=critical,timeStamping` para la TSA).
+La TSA caduca en diciembre de 2045.

@@ -1,0 +1,8 @@
+{
+  "origen": "FreeTSA (https://freetsa.org/tsr), 20-10-2026. Huellas aleatorias (openssl rand -hex 32): no corresponden a ningún documento. Peticiones hechas con `openssl ts -query -digest <huella> -sha256 -cert`; raíz de https://freetsa.org/files/cacert.pem y certificado de la TSA de https://freetsa.org/files/tsa.crt. Los tres verifican con `openssl ts -verify -queryfile vN.tsq -in vN.tsr -CAfile cacert.pem -untrusted tsa.crt`.",
+  "vectores": [
+    { "tsr": "v1.tsr", "tsq": "v1.tsq", "huella": "81e7ed4ab62dea05c7de9e10cd93aeadf43dd9160a89d6ca07650c6eb11b5e10", "nonce": "f82c6549777e9d5d", "serie": "094feba8", "genTimeIso": "2026-10-20T18:48:12.000Z" },
+    { "tsr": "v2.tsr", "tsq": "v2.tsq", "huella": "b431b3f243060ed4e237154920a9f20a0963d9fc67cead50a66e3968a5add552", "nonce": "2272ff9b4ac19389", "serie": "094febaf", "genTimeIso": "2026-10-20T18:48:15.000Z" },
+    { "tsr": "v3.tsr", "tsq": "v3.tsq", "huella": "00de32b8e83a6333463eeacd4ddd402697d52d18a89f878d9641bef3e410b9d9", "nonce": "cbd1bd0ef39a86e4", "serie": "094febb8", "genTimeIso": "2026-10-20T18:48:18.000Z" }
+  ]
+}
