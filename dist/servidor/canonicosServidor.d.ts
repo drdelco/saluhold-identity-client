@@ -104,7 +104,17 @@ export interface DatosTenantServidor {
         };
     };
     activo?: boolean;
+    /**
+     * El documento fiscal. En España, su NIF (CIF, DNI o NIE); fuera de España
+     * (lo dice `direccion.pais`), el número de registro de su país (0.15.1).
+     */
     cif?: string;
+    /**
+     * El tipo del documento (vocabulario de `tipoDocumento`). Fuera de España,
+     * por defecto «OTRO_DOCUMENTO»; un tipo español no vale. Solo superadmin en
+     * la edición; en el alta lo pone la app (0.15.1).
+     */
+    tipoIdentificador?: string | null;
     planConcedido?: string | null;
     adminPrincipal?: {
         email: string;
